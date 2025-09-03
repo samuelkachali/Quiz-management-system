@@ -9,20 +9,42 @@ export default function Home() {
           <p className="text-gray-600 mb-8">Choose your role to get started</p>
         </div>
         
-        <div className="space-y-4">
-          <Link 
-            href="/admin/login" 
-            className="w-full flex justify-center py-4 px-6 border border-transparent rounded-lg shadow-lg text-lg font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200"
-          >
-            Admin Login
-          </Link>
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-gray-900 text-center">Admin Access</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <Link 
+                href="/admin/login" 
+                className="flex justify-center py-3 px-4 border border-transparent rounded-lg shadow text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition duration-200"
+              >
+                Login
+              </Link>
+              <Link 
+                href="/admin/signup" 
+                className="flex justify-center py-3 px-4 border border-indigo-600 rounded-lg shadow text-sm font-medium text-indigo-600 bg-white hover:bg-indigo-50 transition duration-200"
+              >
+                Request Access
+              </Link>
+            </div>
+          </div>
           
-          <Link 
-            href="/student/login" 
-            className="w-full flex justify-center py-4 px-6 border border-gray-300 rounded-lg shadow-lg text-lg font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200"
-          >
-            Student Login
-          </Link>
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-gray-900 text-center">Student Access</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <Link 
+                href="/student/login" 
+                className="flex justify-center py-3 px-4 border border-transparent rounded-lg shadow text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition duration-200"
+              >
+                Login
+              </Link>
+              <Link 
+                href="/student/signup" 
+                className="flex justify-center py-3 px-4 border border-green-600 rounded-lg shadow text-sm font-medium text-green-600 bg-white hover:bg-green-50 transition duration-200"
+              >
+                Sign Up
+              </Link>
+            </div>
+          </div>
         </div>
         
         <div className="text-center text-sm text-gray-500">

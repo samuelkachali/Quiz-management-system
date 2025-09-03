@@ -2,41 +2,71 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 
-export default function StudentLogin() {
+interface SignUpFormProps {
+  userType: 'admin' | 'student';
+}
+
+export default function SignUpForm({ userType }: SignUpFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setSuccess('');
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
+      // Sign up with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+            role: userType,
+            status: userType === 'admin' ? 'pending' : 'active'
+          }
+        }
       });
 
-      const data = await response.json();
+      if (authError) {
+        setError(authError.message);
+        return;
+      }
 
-      if (data.success) {
-        if (data.user.role !== 'student') {
-          setError('Access denied. This is a student login page.');
+      if (authData.user) {
+        // Insert user into our users table
+        const { error: dbError } = await supabase
+          .from('users')
+          .insert({
+            id: authData.user.id,
+            email,
+            name,
+            role: userType,
+            status: userType === 'admin' ? 'pending' : 'active'
+          });
+
+        if (dbError) {
+          setError('Failed to create user profile');
           return;
         }
 
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        router.push('/student/dashboard');
-      } else {
-        setError(data.message || 'Login failed');
+        if (userType === 'admin') {
+          setSuccess('Admin account request submitted! Please wait for approval before signing in.');
+        } else {
+          setSuccess('Account created successfully! You can now sign in.');
+          setTimeout(() => {
+            router.push('/student/login');
+          }, 2000);
+        }
       }
     } catch (error) {
       setError('An error occurred. Please try again.');
@@ -49,8 +79,17 @@ export default function StudentLogin() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
       <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-xl shadow-lg">
         <div className="text-center">
-          <h2 className="text-3xl font-bold text-gray-900">Student Login</h2>
-          <p className="mt-2 text-gray-600">Sign in to your account</p>
+          <h2 className="text-3xl font-bold text-gray-900 capitalize">
+            {userType} Sign Up
+          </h2>
+          <p className="mt-2 text-gray-600">Create your account</p>
+          {userType === 'admin' && (
+            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+              <p className="text-sm text-yellow-800">
+                Admin accounts require approval before activation
+              </p>
+            </div>
+          )}
         </div>
         
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
@@ -59,6 +98,28 @@ export default function StudentLogin() {
               {error}
             </div>
           )}
+          
+          {success && (
+            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
+              {success}
+            </div>
+          )}
+          
+          <div>
+            <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+              Full Name
+            </label>
+            <input
+              id="name"
+              name="name"
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              placeholder="Enter your full name"
+            />
+          </div>
           
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700">
@@ -85,10 +146,11 @@ export default function StudentLogin() {
               name="password"
               type="password"
               required
+              minLength={6}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              placeholder="Enter your password"
+              placeholder="Enter your password (min 6 characters)"
             />
           </div>
           
@@ -97,18 +159,18 @@ export default function StudentLogin() {
             disabled={loading}
             className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Signing in...' : 'Sign in'}
+            {loading ? 'Creating account...' : 'Create Account'}
           </button>
         </form>
         
         <div className="text-center space-y-2">
           <p className="text-sm text-gray-600">
-            Don't have an account?{' '}
+            Already have an account?{' '}
             <a 
-              href="/student/signup" 
+              href={`/${userType}/login`} 
               className="text-indigo-600 hover:text-indigo-500 font-medium"
             >
-              Sign up
+              Sign in
             </a>
           </p>
           <a href="/" className="text-indigo-600 hover:text-indigo-500 text-sm">

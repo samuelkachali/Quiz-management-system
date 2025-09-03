@@ -27,7 +27,7 @@ export default function AdminLogin() {
       const data = await response.json();
 
       if (data.success) {
-        if (data.user.role !== 'admin') {
+        if (data.user.role !== 'admin' && data.user.role !== 'super_admin') {
           setError('Access denied. This is an admin login page.');
           return;
         }
@@ -101,7 +101,16 @@ export default function AdminLogin() {
           </button>
         </form>
         
-        <div className="text-center">
+        <div className="text-center space-y-2">
+          <p className="text-sm text-gray-600">
+            Don't have an account?{' '}
+            <a 
+              href="/admin/signup" 
+              className="text-indigo-600 hover:text-indigo-500 font-medium"
+            >
+              Sign up
+            </a>
+          </p>
           <a href="/" className="text-indigo-600 hover:text-indigo-500 text-sm">
             ← Back to home
           </a>

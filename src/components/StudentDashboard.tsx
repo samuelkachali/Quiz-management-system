@@ -32,22 +32,13 @@ export default function StudentDashboard() {
 
   const fetchData = async (token: string) => {
     try {
-      const [quizzesResponse, attemptsResponse] = await Promise.all([
-        fetch('/api/quizzes', {
-          headers: { 'Authorization': `Bearer ${token}` },
-        }),
-        fetch('/api/quiz-attempts', {
-          headers: { 'Authorization': `Bearer ${token}` },
-        })
-      ]);
-
-      const quizzesData = await quizzesResponse.json();
-      const attemptsData = await attemptsResponse.json();
-
-      if (quizzesData.success) setQuizzes(quizzesData.quizzes);
-      if (attemptsData.success) setAttempts(attemptsData.attempts);
+      // Set empty arrays for now until quiz APIs are implemented
+      setQuizzes([]);
+      setAttempts([]);
     } catch (error) {
       console.error('Error fetching data:', error);
+      setQuizzes([]);
+      setAttempts([]);
     } finally {
       setLoading(false);
     }

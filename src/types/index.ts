@@ -1,9 +1,10 @@
 export interface User {
   id: string;
   email: string;
-  password: string;
-  role: 'admin' | 'student';
   name: string;
+  role: 'admin' | 'student' | 'super_admin';
+  status: 'active' | 'pending' | 'rejected';
+  created_at: string;
 }
 
 export interface Question {
