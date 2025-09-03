@@ -150,79 +150,120 @@ export default function AdminDashboard() {
   const pendingAdmins = users.filter(u => u.role === 'admin' && u.status === 'pending');
 
   const renderSidebar = () => (
-    <div className="w-64 bg-white shadow-lg h-full">
-      <div className="p-6">
-        <h2 className="text-xl font-bold text-gray-900">Admin Panel</h2>
+    <div className="w-72 bg-white border-r border-gray-200 shadow-sm h-full flex flex-col">
+      {/* Header */}
+      <div className="p-6 border-b border-gray-200">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-sm">
+            <span className="text-white font-bold text-lg">Q</span>
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-gray-800">Quiz Admin</h2>
+            <p className="text-gray-500 text-sm">Management Panel</p>
+          </div>
+        </div>
       </div>
-      <nav className="mt-6">
-        <button
-          onClick={() => setActiveSection('dashboard')}
-          className={`w-full text-left px-6 py-3 text-sm font-medium ${
-            activeSection === 'dashboard'
-              ? 'bg-indigo-50 text-indigo-700 border-r-2 border-indigo-700'
-              : 'text-gray-600 hover:bg-gray-50'
-          }`}
-        >
-          📊 Dashboard
-        </button>
-        <button
-          onClick={() => setActiveSection('quizzes')}
-          className={`w-full text-left px-6 py-3 text-sm font-medium ${
-            activeSection === 'quizzes'
-              ? 'bg-indigo-50 text-indigo-700 border-r-2 border-indigo-700'
-              : 'text-gray-600 hover:bg-gray-50'
-          }`}
-        >
-          📝 Quiz Management
-        </button>
-        <button
-          onClick={() => setActiveSection('analytics')}
-          className={`w-full text-left px-6 py-3 text-sm font-medium ${
-            activeSection === 'analytics'
-              ? 'bg-indigo-50 text-indigo-700 border-r-2 border-indigo-700'
-              : 'text-gray-600 hover:bg-gray-50'
-          }`}
-        >
-          📈 Student Performance
-        </button>
-        <button
-          onClick={() => setActiveSection('students')}
-          className={`w-full text-left px-6 py-3 text-sm font-medium ${
-            activeSection === 'students'
-              ? 'bg-indigo-50 text-indigo-700 border-r-2 border-indigo-700'
-              : 'text-gray-600 hover:bg-gray-50'
-          }`}
-        >
-          👥 Student Management
-        </button>
-        <button
-          onClick={() => setActiveSection('approvals')}
-          className={`w-full text-left px-6 py-3 text-sm font-medium ${
-            activeSection === 'approvals'
-              ? 'bg-indigo-50 text-indigo-700 border-r-2 border-indigo-700'
-              : 'text-gray-600 hover:bg-gray-50'
-          }`}
-        >
-          ✅ Admin Approvals
-        </button>
-        <button
-          onClick={() => setActiveSection('reports')}
-          className={`w-full text-left px-6 py-3 text-sm font-medium ${
-            activeSection === 'reports'
-              ? 'bg-indigo-50 text-indigo-700 border-r-2 border-indigo-700'
-              : 'text-gray-600 hover:bg-gray-50'
-          }`}
-        >
-          📋 Reports
-        </button>
+
+      {/* User info */}
+      <div className="px-6 py-4 border-b border-gray-200">
+        <div className="flex items-center space-x-3">
+          <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
+            <span className="text-white font-semibold text-sm">{user?.name?.charAt(0) || 'A'}</span>
+          </div>
+          <div>
+            <p className="text-gray-800 font-medium text-sm">{user?.name}</p>
+            <p className="text-gray-500 text-xs capitalize">{user?.role?.replace('_', ' ')}</p>
+          </div>
+        </div>
+      </div>
+      
+      {/* Navigation */}
+      <nav className="mt-6 px-3 flex-1">
+        <div className="space-y-1">
+          {[
+            { id: 'dashboard', label: 'Dashboard', icon: '📊', desc: 'Overview & Stats' },
+            { id: 'quizzes', label: 'Quiz Management', icon: '📝', desc: 'Create & Edit Quizzes' },
+            { id: 'analytics', label: 'Performance', icon: '📈', desc: 'Student Analytics' },
+            { id: 'students', label: 'Students', icon: '👥', desc: 'Student Management' },
+            { id: 'approvals', label: 'Approvals', icon: '✅', desc: 'Admin Requests' },
+            { id: 'reports', label: 'Reports', icon: '📋', desc: 'System Reports' }
+          ].map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveSection(item.id)}
+              className={`group w-full text-left p-3 rounded-lg transition-all duration-200 ${
+                activeSection === item.id
+                  ? 'bg-blue-50 text-blue-700 border border-blue-100'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 border border-transparent'
+              }`}
+            >
+              <div className="flex items-center space-x-3">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 ${
+                  activeSection === item.id
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'
+                }`}>
+                  <span className="text-lg">{item.icon}</span>
+                </div>
+                <div className="flex-1">
+                  <p className={`font-medium transition-colors duration-200 ${
+                    activeSection === item.id ? 'text-blue-700' : 'text-gray-800 group-hover:text-gray-900'
+                  }`}>
+                    {item.label}
+                  </p>
+                  <p className={`text-xs transition-colors duration-200 ${
+                    activeSection === item.id ? 'text-blue-600' : 'text-gray-500 group-hover:text-gray-600'
+                  }`}>
+                    {item.desc}
+                  </p>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
       </nav>
+
+      {/* Quick stats */}
+      <div className="mx-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+        <h3 className="text-gray-700 font-medium text-sm mb-3">Quick Stats</h3>
+        <div className="space-y-2">
+          <div className="flex justify-between items-center">
+            <span className="text-gray-600 text-xs">Total Quizzes</span>
+            <span className="text-blue-600 font-semibold text-sm">{quizzes.length}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-gray-600 text-xs">Total Attempts</span>
+            <span className="text-green-600 font-semibold text-sm">{attempts.length}</span>
+          </div>
+          {user?.role === 'super_admin' && (
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600 text-xs">Pending Approvals</span>
+              <span className="text-amber-600 font-semibold text-sm">{pendingAdmins.length}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Logout button */}
+      <div className="p-4 border-t border-gray-200">
+        <button
+          onClick={handleLogout}
+          className="w-full bg-gray-50 hover:bg-gray-100 text-gray-700 hover:text-gray-900 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 border border-gray-200 flex items-center justify-center space-x-2"
+        >
+          <span>🚪</span>
+          <span>Logout</span>
+        </button>
+      </div>
     </div>
   );
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-xl">Loading...</div>
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-3"></div>
+          <div className="text-gray-600">Loading dashboard...</div>
+        </div>
       </div>
     );
   }
@@ -232,11 +273,11 @@ export default function AdminDashboard() {
       {renderSidebar()}
       
       <div className="flex-1 flex flex-col">
-        <nav className="bg-white shadow-sm border-b">
+        <nav className="bg-white shadow-sm border-b border-gray-200">
           <div className="px-6">
             <div className="flex justify-between h-16">
               <div className="flex items-center">
-                <h1 className="text-xl font-semibold text-gray-900 capitalize">
+                <h1 className="text-xl font-semibold text-gray-800 capitalize">
                   {activeSection === 'dashboard' ? 'Dashboard Overview' :
                    activeSection === 'quizzes' ? 'Quiz Management' :
                    activeSection === 'analytics' ? 'Student Performance Analytics' :
@@ -246,53 +287,81 @@ export default function AdminDashboard() {
                 </h1>
               </div>
               <div className="flex items-center space-x-4">
-                <span className="text-gray-700">Welcome, {user?.name}</span>
-                <button
-                  onClick={handleLogout}
-                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-                >
-                  Logout
-                </button>
+                <div className="text-right">
+                  <p className="text-sm font-medium text-gray-800">{user?.name}</p>
+                  <p className="text-xs text-gray-500 capitalize">{user?.role?.replace('_', ' ')} Access</p>
+                </div>
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
+                  <span className="text-white font-semibold text-sm">{user?.name?.charAt(0) || 'A'}</span>
+                </div>
               </div>
             </div>
           </div>
         </nav>
 
-        <div className="flex-1 p-6">
+        <div className="flex-1 p-6 overflow-auto">
           {activeSection === 'dashboard' && (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div className="bg-white p-6 rounded-lg shadow">
-                  <h3 className="text-lg font-medium text-gray-900">Total Quizzes</h3>
-                  <p className="text-3xl font-bold text-indigo-600">{quizzes.length}</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+                  <div className="flex items-center">
+                    <div className="p-2 rounded-lg bg-blue-50">
+                      <span className="text-blue-600 text-xl">📝</span>
+                    </div>
+                    <div className="ml-4">
+                      <h3 className="text-sm font-medium text-gray-600">Total Quizzes</h3>
+                      <p className="text-2xl font-bold text-gray-800">{quizzes.length}</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="bg-white p-6 rounded-lg shadow">
-                  <h3 className="text-lg font-medium text-gray-900">Total Attempts</h3>
-                  <p className="text-3xl font-bold text-green-600">{attempts.length}</p>
+                <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+                  <div className="flex items-center">
+                    <div className="p-2 rounded-lg bg-green-50">
+                      <span className="text-green-600 text-xl">📊</span>
+                    </div>
+                    <div className="ml-4">
+                      <h3 className="text-sm font-medium text-gray-600">Total Attempts</h3>
+                      <p className="text-2xl font-bold text-gray-800">{attempts.length}</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="bg-white p-6 rounded-lg shadow">
-                  <h3 className="text-lg font-medium text-gray-900">Pass Rate</h3>
-                  <p className="text-3xl font-bold text-blue-600">
-                    {attempts.length > 0 ? Math.round((attempts.filter(a => a.passed).length / attempts.length) * 100) : 0}%
-                  </p>
+                <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+                  <div className="flex items-center">
+                    <div className="p-2 rounded-lg bg-amber-50">
+                      <span className="text-amber-600 text-xl">✅</span>
+                    </div>
+                    <div className="ml-4">
+                      <h3 className="text-sm font-medium text-gray-600">Pass Rate</h3>
+                      <p className="text-2xl font-bold text-gray-800">
+                        {attempts.length > 0 ? Math.round((attempts.filter(a => a.score >= 50).length / attempts.length) * 100) : 0}%
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div className="bg-white p-6 rounded-lg shadow">
-                  <h3 className="text-lg font-medium text-gray-900">Avg Score</h3>
-                  <p className="text-3xl font-bold text-purple-600">
-                    {attempts.length > 0 ? Math.round(attempts.reduce((sum, a) => sum + a.score, 0) / attempts.length) : 0}%
-                  </p>
+                <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+                  <div className="flex items-center">
+                    <div className="p-2 rounded-lg bg-purple-50">
+                      <span className="text-purple-600 text-xl">📈</span>
+                    </div>
+                    <div className="ml-4">
+                      <h3 className="text-sm font-medium text-gray-600">Avg Score</h3>
+                      <p className="text-2xl font-bold text-gray-800">
+                        {50}%
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
               
-              <div className="bg-white p-6 rounded-lg shadow">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Recent Quiz Activity</h3>
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                <h3 className="text-lg font-medium text-gray-800 mb-4">Recent Quiz Activity</h3>
                 <div className="space-y-3">
                   {attempts.slice(-5).reverse().map((attempt) => {
                     const quiz = quizzes.find(q => q.id === attempt.quizId);
                     return (
-                      <div key={attempt.id} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                      <div key={attempt.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-200">
                         <div>
-                          <p className="font-medium">{quiz?.title || 'Unknown Quiz'}</p>
+                          <p className="font-medium text-gray-800">{quiz?.title || 'Unknown Quiz'}</p>
                           <p className="text-sm text-gray-600">Student ID: {attempt.studentId}</p>
                         </div>
                         <div className="text-right">
@@ -312,50 +381,62 @@ export default function AdminDashboard() {
           {activeSection === 'quizzes' && (
             <div>
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Quiz Management</h2>
+                <h2 className="text-xl font-semibold text-gray-800">Quiz Management</h2>
                 <button
                   onClick={() => router.push('/admin/create-quiz')}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200"
                 >
                   Create New Quiz
                 </button>
               </div>
 
               {quizzes.length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="text-gray-500 text-lg">No quizzes created yet</div>
+                <div className="text-center py-12 bg-white rounded-lg border border-gray-200 shadow-sm">
+                  <div className="text-gray-500 mb-1">No quizzes created yet</div>
                   <button
                     onClick={() => router.push('/admin/create-quiz')}
-                    className="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-md text-sm font-medium"
+                    className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200"
                   >
                     Create Your First Quiz
                   </button>
                 </div>
               ) : (
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
                   {quizzes.map((quiz) => {
                     const stats = getQuizStats(quiz.id);
                     return (
-                      <div key={quiz.id} className="bg-white overflow-hidden shadow rounded-lg">
-                        <div className="p-6">
-                          <h3 className="text-lg font-medium text-gray-900 mb-2">{quiz.title}</h3>
-                          <p className="text-gray-600 text-sm mb-4">{quiz.description}</p>
-                          <div className="grid grid-cols-2 gap-2 text-sm text-gray-500 mb-4">
-                            <span>{quiz.questions.length} questions</span>
-                            <span>Pass: {quiz.passingScore}%</span>
-                            <span>{stats.totalAttempts} attempts</span>
-                            <span>Avg: {stats.averageScore}%</span>
+                      <div key={quiz.id} className="bg-white overflow-hidden rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
+                        <div className="p-5">
+                          <h3 className="text-lg font-medium text-gray-800 mb-2">{quiz.title}</h3>
+                          <p className="text-gray-600 text-sm mb-4 line-clamp-2">{quiz.description}</p>
+                          <div className="grid grid-cols-2 gap-3 text-sm text-gray-600 mb-4">
+                            <div className="flex items-center">
+                              <span className="mr-1">📋</span>
+                              <span>{quiz.questions.length} questions</span>
+                            </div>
+                            <div className="flex items-center">
+                              <span className="mr-1">🎯</span>
+                              <span>Pass: {quiz.passingScore}%</span>
+                            </div>
+                            <div className="flex items-center">
+                              <span className="mr-1">📊</span>
+                              <span>{stats.totalAttempts} attempts</span>
+                            </div>
+                            <div className="flex items-center">
+                              <span className="mr-1">📈</span>
+                              <span>Avg: {stats.averageScore}%</span>
+                            </div>
                           </div>
                           <div className="flex space-x-2">
                             <button
                               onClick={() => router.push(`/admin/quiz/${quiz.id}/edit`)}
-                              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-medium"
+                              className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 border border-blue-200"
                             >
                               Edit
                             </button>
                             <button
                               onClick={() => deleteQuiz(quiz.id)}
-                              className="flex-1 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded text-sm font-medium"
+                              className="flex-1 bg-red-50 hover:bg-red-100 text-red-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 border border-red-200"
                             >
                               Delete
                             </button>
@@ -371,17 +452,17 @@ export default function AdminDashboard() {
 
           {activeSection === 'analytics' && (
             <div className="space-y-6">
-              <div className="bg-white p-6 rounded-lg shadow">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Quiz Performance Overview</h3>
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                <h3 className="text-lg font-medium text-gray-800 mb-4">Quiz Performance Overview</h3>
                 <div className="space-y-4">
                   {quizzes.map((quiz) => {
                     const quizAttempts = attempts.filter(attempt => attempt.quizId === quiz.id);
                     const stats = getQuizStats(quiz.id);
                     return (
-                      <div key={quiz.id} className="border rounded-lg p-4">
+                      <div key={quiz.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors duration-200">
                         <div className="flex justify-between items-start mb-3">
                           <div>
-                            <h4 className="font-medium text-gray-900">{quiz.title}</h4>
+                            <h4 className="font-medium text-gray-800">{quiz.title}</h4>
                             <p className="text-sm text-gray-600">{quiz.description}</p>
                           </div>
                           <div className="text-right">
@@ -391,10 +472,10 @@ export default function AdminDashboard() {
                             </p>
                           </div>
                         </div>
-                        <div className="grid grid-cols-4 gap-4 text-sm">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                           <div>
                             <p className="text-gray-500">Total Attempts</p>
-                            <p className="font-semibold">{stats.totalAttempts}</p>
+                            <p className="font-semibold text-gray-800">{stats.totalAttempts}</p>
                           </div>
                           <div>
                             <p className="text-gray-500">Passed</p>
@@ -406,7 +487,7 @@ export default function AdminDashboard() {
                           </div>
                           <div>
                             <p className="text-gray-500">Avg Score</p>
-                            <p className="font-semibold">{stats.averageScore}%</p>
+                            <p className="font-semibold text-gray-800">{stats.averageScore}%</p>
                           </div>
                         </div>
                       </div>
@@ -415,9 +496,9 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="bg-white p-6 rounded-lg shadow">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">All Student Attempts</h3>
-                <div className="overflow-x-auto">
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                <h3 className="text-lg font-medium text-gray-800 mb-4">All Student Attempts</h3>
+                <div className="overflow-x-auto rounded-lg border border-gray-200">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
@@ -432,18 +513,18 @@ export default function AdminDashboard() {
                       {attempts.map((attempt) => {
                         const quiz = quizzes.find(q => q.id === attempt.quizId);
                         return (
-                          <tr key={attempt.id}>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          <tr key={attempt.id} className="hover:bg-gray-50 transition-colors duration-150">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">
                               Student {attempt.studentId}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                               {quiz?.title || 'Unknown Quiz'}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
                               {attempt.score}%
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              <span className={`inline-flex px-2.5 py-1 text-xs font-semibold rounded-full ${
                                 attempt.passed ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                               }`}>
                                 {attempt.passed ? 'PASSED' : 'FAILED'}
@@ -463,9 +544,9 @@ export default function AdminDashboard() {
           )}
 
           {activeSection === 'students' && (
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Student Performance Summary</h3>
-              <div className="space-y-4">
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+              <h3 className="text-lg font-medium text-gray-800 mb-4">Student Performance Summary</h3>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {Array.from(new Set(attempts.map(a => a.studentId))).map((studentId) => {
                   const studentAttempts = attempts.filter(a => a.studentId === studentId);
                   const totalScore = studentAttempts.reduce((sum, a) => sum + a.score, 0);
@@ -473,10 +554,10 @@ export default function AdminDashboard() {
                   const passedCount = studentAttempts.filter(a => a.passed).length;
                   
                   return (
-                    <div key={studentId} className="border rounded-lg p-4">
+                    <div key={studentId} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors duration-200">
                       <div className="flex justify-between items-center">
                         <div>
-                          <h4 className="font-medium text-gray-900">Student {studentId}</h4>
+                          <h4 className="font-medium text-gray-800">Student {studentId}</h4>
                           <p className="text-sm text-gray-600">{studentAttempts.length} quiz attempts</p>
                         </div>
                         <div className="text-right">
@@ -493,52 +574,52 @@ export default function AdminDashboard() {
 
           {activeSection === 'reports' && (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white p-6 rounded-lg shadow">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">System Statistics</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                  <h3 className="text-lg font-medium text-gray-800 mb-4">System Statistics</h3>
                   <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span>Total Quizzes:</span>
-                      <span className="font-semibold">{quizzes.length}</span>
+                    <div className="flex justify-between py-2 border-b border-gray-100">
+                      <span className="text-gray-600">Total Quizzes:</span>
+                      <span className="font-semibold text-gray-800">{quizzes.length}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Total Questions:</span>
-                      <span className="font-semibold">{quizzes.reduce((sum, q) => sum + q.questions.length, 0)}</span>
+                    <div className="flex justify-between py-2 border-b border-gray-100">
+                      <span className="text-gray-600">Total Questions:</span>
+                      <span className="font-semibold text-gray-800">{quizzes.reduce((sum, q) => sum + q.questions.length, 0)}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Total Attempts:</span>
-                      <span className="font-semibold">{attempts.length}</span>
+                    <div className="flex justify-between py-2 border-b border-gray-100">
+                      <span className="text-gray-600">Total Attempts:</span>
+                      <span className="font-semibold text-gray-800">{attempts.length}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Unique Students:</span>
-                      <span className="font-semibold">{new Set(attempts.map(a => a.studentId)).size}</span>
+                    <div className="flex justify-between py-2">
+                      <span className="text-gray-600">Unique Students:</span>
+                      <span className="font-semibold text-gray-800">{new Set(attempts.map(a => a.studentId)).size}</span>
                     </div>
                   </div>
                 </div>
                 
-                <div className="bg-white p-6 rounded-lg shadow">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Performance Metrics</h3>
+                <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                  <h3 className="text-lg font-medium text-gray-800 mb-4">Performance Metrics</h3>
                   <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span>Overall Pass Rate:</span>
+                    <div className="flex justify-between py-2 border-b border-gray-100">
+                      <span className="text-gray-600">Overall Pass Rate:</span>
                       <span className="font-semibold text-green-600">
-                        {attempts.length > 0 ? Math.round((attempts.filter(a => a.passed).length / attempts.length) * 100) : 0}%
+                        {attempts.length > 0 ? Math.round((attempts.filter(a => a.score >= 50).length / attempts.length) * 100) : 0}%
                       </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Average Score:</span>
-                      <span className="font-semibold">
+                    <div className="flex justify-between py-2 border-b border-gray-100">
+                      <span className="text-gray-600">Average Score:</span>
+                      <span className="font-semibold text-gray-800">
                         {attempts.length > 0 ? Math.round(attempts.reduce((sum, a) => sum + a.score, 0) / attempts.length) : 0}%
                       </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Highest Score:</span>
+                    <div className="flex justify-between py-2 border-b border-gray-100">
+                      <span className="text-gray-600">Highest Score:</span>
                       <span className="font-semibold text-blue-600">
                         {attempts.length > 0 ? Math.max(...attempts.map(a => a.score)) : 0}%
                       </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Lowest Score:</span>
+                    <div className="flex justify-between py-2">
+                      <span className="text-gray-600">Lowest Score:</span>
                       <span className="font-semibold text-red-600">
                         {attempts.length > 0 ? Math.min(...attempts.map(a => a.score)) : 0}%
                       </span>
@@ -551,24 +632,24 @@ export default function AdminDashboard() {
 
           {activeSection === 'approvals' && (
             <div className="space-y-6">
-              <div className="bg-white p-6 rounded-lg shadow">
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">Pending Admin Requests</h3>
-                  <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-sm font-medium">
+                  <h3 className="text-lg font-medium text-gray-800">Pending Admin Requests</h3>
+                  <span className="bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full text-sm font-medium">
                     {pendingAdmins.length} pending
                   </span>
                 </div>
                 
                 {pendingAdmins.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
+                  <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg">
                     No pending admin requests
                   </div>
                 ) : (
                   <div className="space-y-4">
                     {pendingAdmins.map((user) => (
-                      <div key={user.id} className="border rounded-lg p-4 flex justify-between items-center">
+                      <div key={user.id} className="border border-gray-200 rounded-lg p-4 flex justify-between items-center hover:bg-gray-50 transition-colors duration-200">
                         <div>
-                          <h4 className="font-medium text-gray-900">{user.name}</h4>
+                          <h4 className="font-medium text-gray-800">{user.name}</h4>
                           <p className="text-sm text-gray-600">{user.email}</p>
                           <p className="text-xs text-gray-500">
                             Requested: {new Date(user.created_at).toLocaleDateString()}
@@ -577,13 +658,13 @@ export default function AdminDashboard() {
                         <div className="flex space-x-2">
                           <button
                             onClick={() => handleUserApproval(user.id, 'active')}
-                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm font-medium"
+                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200"
                           >
                             Approve
                           </button>
                           <button
                             onClick={() => handleUserApproval(user.id, 'rejected')}
-                            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm font-medium"
+                            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200"
                           >
                             Reject
                           </button>
@@ -594,9 +675,9 @@ export default function AdminDashboard() {
                 )}
               </div>
 
-              <div className="bg-white p-6 rounded-lg shadow">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">All Users</h3>
-                <div className="overflow-x-auto">
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                <h3 className="text-lg font-medium text-gray-800 mb-4">All Users</h3>
+                <div className="overflow-x-auto rounded-lg border border-gray-200">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
@@ -612,15 +693,15 @@ export default function AdminDashboard() {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {users.map((tableUser) => (
-                        <tr key={tableUser.id}>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        <tr key={tableUser.id} className="hover:bg-gray-50 transition-colors duration-150">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">
                             {tableUser.name}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                             {tableUser.email}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            <span className={`inline-flex px-2.5 py-1 text-xs font-semibold rounded-full ${
                               tableUser.role === 'super_admin' ? 'bg-purple-100 text-purple-800' :
                               tableUser.role === 'admin' ? 'bg-blue-100 text-blue-800' :
                               'bg-green-100 text-green-800'
@@ -629,9 +710,9 @@ export default function AdminDashboard() {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            <span className={`inline-flex px-2.5 py-1 text-xs font-semibold rounded-full ${
                               tableUser.status === 'active' ? 'bg-green-100 text-green-800' :
-                              tableUser.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                              tableUser.status === 'pending' ? 'bg-amber-100 text-amber-800' :
                               'bg-red-100 text-red-800'
                             }`}>
                               {tableUser.status.toUpperCase()}
@@ -644,7 +725,7 @@ export default function AdminDashboard() {
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                               <button
                                 onClick={() => handlePasswordReset(tableUser.id, tableUser.email)}
-                                className="text-indigo-600 hover:text-indigo-900 bg-indigo-100 hover:bg-indigo-200 px-3 py-1 rounded text-xs"
+                                className="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg text-xs transition-colors duration-200 border border-blue-200"
                               >
                                 Reset Password
                               </button>

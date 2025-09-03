@@ -35,7 +35,16 @@ export default function QuizTaker({ quizId }: QuizTakerProps) {
 
       const data = await response.json();
       if (data.success) {
-        setQuiz(data.quiz);
+        // Transform database format to frontend format if needed
+        const quiz = {
+          ...data.quiz,
+          passingScore: data.quiz.passing_score || data.quiz.passingScore,
+          createdBy: data.quiz.created_by || data.quiz.createdBy,
+          createdAt: data.quiz.created_at || data.quiz.createdAt
+        };
+        console.log('Quiz loaded:', quiz);
+        console.log('First question:', quiz.questions[0]);
+        setQuiz(quiz);
       } else {
         alert('Quiz not found');
         router.push('/student/dashboard');
@@ -179,46 +188,59 @@ export default function QuizTaker({ quizId }: QuizTakerProps) {
             </h3>
 
             {currentQ.type === 'multiple-choice' && currentQ.options && (
-              <div className="space-y-3">
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600 mb-3">Select one answer:</p>
                 {currentQ.options.map((option, index) => (
-                  <label key={index} className="flex items-center space-x-3 cursor-pointer">
+                  <label 
+                    key={index} 
+                    className="flex items-start space-x-4 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-indigo-300 hover:bg-indigo-50 transition-all duration-200"
+                  >
                     <input
                       type="radio"
                       name={`question-${currentQ.id}`}
                       value={index}
                       checked={answers[currentQ.id] === index}
                       onChange={() => handleAnswerChange(currentQ.id, index)}
-                      className="text-indigo-600 focus:ring-indigo-500"
+                      className="mt-1 w-4 h-4 text-indigo-600 focus:ring-indigo-500 focus:ring-2"
                     />
-                    <span className="text-gray-700">{option}</span>
+                    <span className="text-gray-800 font-medium flex-1 leading-relaxed">
+                      {String.fromCharCode(65 + index)}. {option}
+                    </span>
                   </label>
                 ))}
               </div>
             )}
 
+            {currentQ.type === 'multiple-choice' && !currentQ.options && (
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-yellow-800">⚠️ This question is missing answer options. Please contact your instructor.</p>
+              </div>
+            )}
+
             {currentQ.type === 'true-false' && (
-              <div className="space-y-3">
-                <label className="flex items-center space-x-3 cursor-pointer">
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600 mb-3">Select True or False:</p>
+                <label className="flex items-start space-x-4 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-indigo-300 hover:bg-indigo-50 transition-all duration-200">
                   <input
                     type="radio"
                     name={`question-${currentQ.id}`}
                     value="true"
                     checked={answers[currentQ.id] === 'true'}
                     onChange={() => handleAnswerChange(currentQ.id, 'true')}
-                    className="text-indigo-600 focus:ring-indigo-500"
+                    className="mt-1 w-4 h-4 text-indigo-600 focus:ring-indigo-500 focus:ring-2"
                   />
-                  <span className="text-gray-700">True</span>
+                  <span className="text-gray-800 font-medium flex-1 leading-relaxed">✓ True</span>
                 </label>
-                <label className="flex items-center space-x-3 cursor-pointer">
+                <label className="flex items-start space-x-4 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-indigo-300 hover:bg-indigo-50 transition-all duration-200">
                   <input
                     type="radio"
                     name={`question-${currentQ.id}`}
                     value="false"
                     checked={answers[currentQ.id] === 'false'}
                     onChange={() => handleAnswerChange(currentQ.id, 'false')}
-                    className="text-indigo-600 focus:ring-indigo-500"
+                    className="mt-1 w-4 h-4 text-indigo-600 focus:ring-indigo-500 focus:ring-2"
                   />
-                  <span className="text-gray-700">False</span>
+                  <span className="text-gray-800 font-medium flex-1 leading-relaxed">✗ False</span>
                 </label>
               </div>
             )}

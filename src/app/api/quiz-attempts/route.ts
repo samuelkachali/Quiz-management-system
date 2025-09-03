@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     });
 
     const score = Math.round((correctAnswers / quiz.questions.length) * 100);
-    const passed = score >= quiz.passingScore;
+    const passed = score >= (quiz.passing_score || quiz.passingScore || 50);
 
     const { data: attempt, error: attemptError } = await supabase
       .from('quiz_attempts')
