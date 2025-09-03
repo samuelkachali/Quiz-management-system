@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { quizAttempts } from '../../../../../backend/data/storage';
+import { supabase } from '../../../../lib/supabase';
 import { verifyToken } from '../../../../../backend/utils/auth';
 
 export async function GET(request: NextRequest) {
@@ -21,7 +21,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ success: true, attempts: quizAttempts });
+    const { data: attempts, error } = await supabase
+      .from('quiz_attempts')
+      .select('*');
+
+    if (error) {
+      return NextResponse.json(
+        { success: false, message: 'Failed to fetch quiz attempts' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true, attempts });
   } catch (error) {
     return NextResponse.json(
       { success: false, message: 'Internal server error' },

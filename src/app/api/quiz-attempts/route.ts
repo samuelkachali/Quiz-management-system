@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { addQuizAttempt, findQuizById, getQuizAttemptsByStudent } from '../../../../backend/data/storage';
+import { supabase } from '../../../lib/supabase';
 import { verifyToken } from '../../../../backend/utils/auth';
+import { Question } from '../../../types';
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,8 +31,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const quiz = findQuizById(quizId);
-    if (!quiz) {
+    const { data: quiz, error: quizError } = await supabase
+      .from('quizzes')
+      .select('*')
+      .eq('id', quizId)
+      .single();
+
+    if (quizError || !quiz) {
       return NextResponse.json(
         { success: false, message: 'Quiz not found' },
         { status: 404 }
@@ -40,7 +46,7 @@ export async function POST(request: NextRequest) {
 
     // Calculate score
     let correctAnswers = 0;
-    quiz.questions.forEach(question => {
+    quiz.questions.forEach((question: Question) => {
       const studentAnswer = answers[question.id];
       if (studentAnswer === question.correctAnswer) {
         correctAnswers++;
@@ -50,13 +56,25 @@ export async function POST(request: NextRequest) {
     const score = Math.round((correctAnswers / quiz.questions.length) * 100);
     const passed = score >= quiz.passingScore;
 
-    const attempt = addQuizAttempt({
-      quizId,
-      studentId: decoded.id,
-      answers,
-      score,
-      passed
-    });
+    const { data: attempt, error: attemptError } = await supabase
+      .from('quiz_attempts')
+      .insert({
+        quiz_id: quizId,
+        student_id: decoded.id,
+        answers,
+        score,
+        passed,
+        completed_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (attemptError) {
+      return NextResponse.json(
+        { success: false, message: 'Failed to save quiz attempt' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ 
       success: true, 
@@ -90,7 +108,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const attempts = getQuizAttemptsByStudent(decoded.id);
+    const { data: attempts, error } = await supabase
+      .from('quiz_attempts')
+      .select('*')
+      .eq('student_id', decoded.id);
+
+    if (error) {
+      return NextResponse.json(
+        { success: false, message: 'Failed to fetch quiz attempts' },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({ success: true, attempts });
   } catch (error) {
     return NextResponse.json(

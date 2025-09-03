@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { findQuizById } from '../../../../../backend/data/storage';
+import { supabase } from '../../../../lib/supabase';
 import { verifyToken } from '../../../../../backend/utils/auth';
 
 export async function GET(
@@ -24,8 +24,13 @@ export async function GET(
       );
     }
 
-    const quiz = findQuizById(params.id);
-    if (!quiz) {
+    const { data: quiz, error } = await supabase
+      .from('quizzes')
+      .select('*')
+      .eq('id', params.id)
+      .single();
+
+    if (error || !quiz) {
       return NextResponse.json(
         { success: false, message: 'Quiz not found' },
         { status: 404 }
