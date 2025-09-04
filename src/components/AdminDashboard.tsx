@@ -77,13 +77,31 @@ export default function AdminDashboard() {
 
   const deleteQuiz = async (quizId: string) => {
     if (!confirm('Are you sure you want to delete this quiz?')) return;
-    setQuizzes(quizzes.filter(quiz => quiz.id !== quizId));
+    
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/quizzes/${quizId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setQuizzes(quizzes.filter(quiz => quiz.id !== quizId));
+        alert('Quiz deleted successfully');
+      } else {
+        alert('Failed to delete quiz: ' + data.message);
+      }
+    } catch (error) {
+      console.error('Error deleting quiz:', error);
+      alert('Error deleting quiz');
+    }
   };
 
   const getQuizStats = (quizId: string) => {
-    const quizAttempts = attempts.filter(attempt => attempt.quizId === quizId);
+    const quizAttempts = attempts.filter(attempt => (attempt.quizId || attempt.quiz_id) === quizId);
     const totalAttempts = quizAttempts.length;
-    const passedAttempts = quizAttempts.filter(attempt => attempt.passed).length;
+    const passedAttempts = quizAttempts.filter(attempt => attempt.score >= 50).length;
     const averageScore = totalAttempts > 0 
       ? Math.round(quizAttempts.reduce((sum, attempt) => sum + attempt.score, 0) / totalAttempts)
       : 0;
@@ -185,7 +203,7 @@ export default function AdminDashboard() {
             { id: 'quizzes', label: 'Quiz Management', icon: '📝', desc: 'Create & Edit Quizzes' },
             { id: 'analytics', label: 'Performance', icon: '📈', desc: 'Student Analytics' },
             { id: 'students', label: 'Students', icon: '👥', desc: 'Student Management' },
-            { id: 'approvals', label: 'Approvals', icon: '✅', desc: 'Admin Requests' },
+            ...(user?.role === 'super_admin' ? [{ id: 'approvals', label: 'Approvals', icon: '✅', desc: 'Admin Requests' }] : []),
             { id: 'reports', label: 'Reports', icon: '📋', desc: 'System Reports' }
           ].map((item) => (
             <button
@@ -273,7 +291,7 @@ export default function AdminDashboard() {
       {renderSidebar()}
       
       <div className="flex-1 flex flex-col">
-        <nav className="bg-white shadow-sm border-b border-gray-200">
+      <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
           <div className="px-6">
             <div className="flex justify-between h-16">
               <div className="flex items-center">
@@ -357,18 +375,27 @@ export default function AdminDashboard() {
                 <h3 className="text-lg font-medium text-gray-800 mb-4">Recent Quiz Activity</h3>
                 <div className="space-y-3">
                   {attempts.slice(-5).reverse().map((attempt) => {
-                    const quiz = quizzes.find(q => q.id === attempt.quizId);
+                    const quiz = quizzes.find(q => q.id === (attempt.quizId || attempt.quiz_id));
+                    const isPassed = attempt.score >= 50;
+                    const formatDate = (dateStr: string | Date) => {
+                      try {
+                        const date = new Date(dateStr);
+                        return isNaN(date.getTime()) ? 'Invalid Date' : date.toLocaleDateString();
+                      } catch {
+                        return 'Invalid Date';
+                      }
+                    };
                     return (
                       <div key={attempt.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-200">
                         <div>
                           <p className="font-medium text-gray-800">{quiz?.title || 'Unknown Quiz'}</p>
-                          <p className="text-sm text-gray-600">Student ID: {attempt.studentId}</p>
+                          <p className="text-sm text-gray-600">Student ID: {attempt.studentId || attempt.student_id}</p>
                         </div>
                         <div className="text-right">
-                          <p className={`font-bold ${attempt.passed ? 'text-green-600' : 'text-red-600'}`}>
-                            {attempt.score}% - {attempt.passed ? 'PASSED' : 'FAILED'}
+                          <p className={`font-bold ${isPassed ? 'text-green-600' : 'text-red-600'}`}>
+                            {attempt.score}% - {isPassed ? 'PASSED' : 'FAILED'}
                           </p>
-                          <p className="text-sm text-gray-500">{new Date(attempt.completedAt).toLocaleDateString()}</p>
+                          <p className="text-sm text-gray-500">{formatDate(attempt.completedAt || attempt.completed_at)}</p>
                         </div>
                       </div>
                     );
@@ -456,7 +483,7 @@ export default function AdminDashboard() {
                 <h3 className="text-lg font-medium text-gray-800 mb-4">Quiz Performance Overview</h3>
                 <div className="space-y-4">
                   {quizzes.map((quiz) => {
-                    const quizAttempts = attempts.filter(attempt => attempt.quizId === quiz.id);
+                    const quizAttempts = attempts.filter(attempt => (attempt.quizId || attempt.quiz_id) === quiz.id);
                     const stats = getQuizStats(quiz.id);
                     return (
                       <div key={quiz.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors duration-200">
@@ -511,11 +538,20 @@ export default function AdminDashboard() {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {attempts.map((attempt) => {
-                        const quiz = quizzes.find(q => q.id === attempt.quizId);
+                        const quiz = quizzes.find(q => q.id === (attempt.quizId || attempt.quiz_id));
+                        const isPassed = attempt.score >= 50;
+                        const formatDate = (dateStr: string | Date) => {
+                          try {
+                            const date = new Date(dateStr);
+                            return isNaN(date.getTime()) ? 'Invalid Date' : date.toLocaleDateString();
+                          } catch {
+                            return 'Invalid Date';
+                          }
+                        };
                         return (
                           <tr key={attempt.id} className="hover:bg-gray-50 transition-colors duration-150">
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">
-                              Student {attempt.studentId}
+                              Student {attempt.studentId || attempt.student_id}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                               {quiz?.title || 'Unknown Quiz'}
@@ -525,13 +561,13 @@ export default function AdminDashboard() {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <span className={`inline-flex px-2.5 py-1 text-xs font-semibold rounded-full ${
-                                attempt.passed ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                isPassed ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                               }`}>
-                                {attempt.passed ? 'PASSED' : 'FAILED'}
+                                {isPassed ? 'PASSED' : 'FAILED'}
                               </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {new Date(attempt.completedAt).toLocaleDateString()}
+                              {formatDate(attempt.completedAt || attempt.completed_at)}
                             </td>
                           </tr>
                         );
@@ -547,11 +583,11 @@ export default function AdminDashboard() {
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
               <h3 className="text-lg font-medium text-gray-800 mb-4">Student Performance Summary</h3>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {Array.from(new Set(attempts.map(a => a.studentId))).map((studentId) => {
-                  const studentAttempts = attempts.filter(a => a.studentId === studentId);
+                {Array.from(new Set(attempts.map(a => a.studentId || a.student_id))).map((studentId) => {
+                  const studentAttempts = attempts.filter(a => (a.studentId || a.student_id) === studentId);
                   const totalScore = studentAttempts.reduce((sum, a) => sum + a.score, 0);
                   const avgScore = Math.round(totalScore / studentAttempts.length);
-                  const passedCount = studentAttempts.filter(a => a.passed).length;
+                  const passedCount = studentAttempts.filter(a => a.score >= 50).length;
                   
                   return (
                     <div key={studentId} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors duration-200">

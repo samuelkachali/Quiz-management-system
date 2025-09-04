@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Quiz, Question } from '@/types';
 
@@ -15,6 +15,10 @@ export default function QuizTaker({ quizId }: QuizTakerProps) {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [timeLeft, setTimeLeft] = useState(2 * 60 * 60); // 2 hours in seconds
+  const [timerExpired, setTimerExpired] = useState(false);
+  const [quizStarted, setQuizStarted] = useState(false);
+  const hasSubmittedRef = useRef(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -27,6 +31,83 @@ export default function QuizTaker({ quizId }: QuizTakerProps) {
     fetchQuiz(token);
   }, [quizId, router]);
 
+  // Timer effect
+  useEffect(() => {
+    if (timeLeft <= 0 && !result && !timerExpired) {
+      setTimerExpired(true);
+      handleAutoSubmit('timer_expired');
+      return;
+    }
+
+    if (result || timerExpired) return;
+
+    const timer = setInterval(() => {
+      setTimeLeft(prev => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [timeLeft, result, timerExpired]);
+
+  // Auto-submit on page unload/exit
+  useEffect(() => {
+    if (!quiz || result || hasSubmittedRef.current) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (quizStarted && !result && !hasSubmittedRef.current) {
+        // Submit quiz silently before page unloads
+        submitQuizOnExit();
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && quizStarted && !result && !hasSubmittedRef.current) {
+        submitQuizOnExit();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [quiz, quizStarted, result]);
+
+  // Mark quiz as started when user first interacts
+  useEffect(() => {
+    if (quiz && !loading && !quizStarted) {
+      setQuizStarted(true);
+    }
+  }, [quiz, loading, quizStarted]);
+
+  const submitQuizOnExit = async () => {
+    if (hasSubmittedRef.current || !quiz) return;
+    
+    hasSubmittedRef.current = true;
+    
+    try {
+      const token = localStorage.getItem('token');
+      await fetch('/api/quiz-attempts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ 
+          quizId, 
+          answers,
+          exitedEarly: true 
+        }),
+        keepalive: true // Ensures request completes even if page is closing
+      });
+    } catch (error) {
+      console.error('Exit submit error:', error);
+    }
+  };
+
   const fetchQuiz = async (token: string) => {
     try {
       const response = await fetch(`/api/quizzes/${quizId}`, {
@@ -35,15 +116,12 @@ export default function QuizTaker({ quizId }: QuizTakerProps) {
 
       const data = await response.json();
       if (data.success) {
-        // Transform database format to frontend format if needed
         const quiz = {
           ...data.quiz,
           passingScore: data.quiz.passing_score || data.quiz.passingScore,
           createdBy: data.quiz.created_by || data.quiz.createdBy,
           createdAt: data.quiz.created_at || data.quiz.createdAt
         };
-        console.log('Quiz loaded:', quiz);
-        console.log('First question:', quiz.questions[0]);
         setQuiz(quiz);
       } else {
         alert('Quiz not found');
@@ -56,12 +134,55 @@ export default function QuizTaker({ quizId }: QuizTakerProps) {
     }
   };
 
+  const formatTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const handleAnswerChange = (questionId: string, answer: string | number) => {
     setAnswers(prev => ({ ...prev, [questionId]: answer }));
   };
 
+  const handleAutoSubmit = async (reason: string = 'auto') => {
+    if (!quiz || hasSubmittedRef.current) return;
+    
+    hasSubmittedRef.current = true;
+    setSubmitting(true);
+    
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/quiz-attempts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ 
+          quizId, 
+          answers,
+          autoSubmitted: true,
+          reason 
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setResult(data);
+      } else {
+        alert(data.message || 'Failed to submit quiz');
+      }
+    } catch (error) {
+      console.error('Auto-submit error:', error);
+      alert('An error occurred during auto-submit.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleSubmit = async () => {
-    if (!quiz) return;
+    if (!quiz || hasSubmittedRef.current) return;
 
     // Check if all questions are answered
     const unanswered = quiz.questions.filter(q => !(q.id in answers));
@@ -70,7 +191,9 @@ export default function QuizTaker({ quizId }: QuizTakerProps) {
       return;
     }
 
+    hasSubmittedRef.current = true;
     setSubmitting(true);
+    
     try {
       const token = localStorage.getItem('token');
       const response = await fetch('/api/quiz-attempts', {
@@ -95,6 +218,20 @@ export default function QuizTaker({ quizId }: QuizTakerProps) {
     }
   };
 
+  const handleBackToDashboard = async () => {
+    if (quizStarted && !result && !hasSubmittedRef.current) {
+      const confirmed = confirm('Are you sure you want to exit? Your quiz will be automatically submitted with current answers.');
+      if (confirmed) {
+        await handleAutoSubmit('user_exit');
+        // Don't navigate immediately, let the result state update first
+        // Navigation will happen automatically when result is set
+        return;
+      }
+    } else {
+      router.push('/student/dashboard');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -111,15 +248,29 @@ export default function QuizTaker({ quizId }: QuizTakerProps) {
     );
   }
 
+  // Auto-navigate after user exit submission
+  useEffect(() => {
+    if (result && result.autoSubmitted && result.reason === 'user_exit') {
+      const timer = setTimeout(() => {
+        router.push('/student/dashboard');
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [result, router]);
+
   if (result) {
+    const isPassed = result.attempt.score >= 50;
+    const isUserExit = result.autoSubmitted && result.reason === 'user_exit';
+    
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
-          <div className={`text-6xl mb-4 ${result.attempt.passed ? 'text-green-500' : 'text-red-500'}`}>
-            {result.attempt.passed ? '✅' : '❌'}
+          <div className={`text-6xl mb-4 ${isPassed ? 'text-green-500' : 'text-red-500'}`}>
+            {isPassed ? '✅' : '❌'}
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            {result.attempt.passed ? 'Congratulations!' : 'Try Again'}
+            {isPassed ? 'Congratulations!' : 'Try Again Next Time'}
           </h2>
           <p className="text-gray-600 mb-4">
             You scored {result.attempt.score}% on "{result.quiz.title}"
@@ -127,19 +278,30 @@ export default function QuizTaker({ quizId }: QuizTakerProps) {
           <p className="text-sm text-gray-500 mb-6">
             Passing score: {result.quiz.passingScore}%
           </p>
+          {timerExpired && (
+            <p className="text-sm text-red-600 mb-4">
+              ⏰ Time expired - Quiz was automatically submitted
+            </p>
+          )}
+          {isUserExit && (
+            <div className="mb-4">
+              <p className="text-sm text-orange-600 mb-2">
+                📤 Quiz was submitted when you exited
+              </p>
+              <p className="text-xs text-gray-500">
+                Returning to dashboard in 2 seconds...
+              </p>
+            </div>
+          )}
           <div className="space-y-3">
-            <button
-              onClick={() => router.push('/student/dashboard')}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md font-medium"
-            >
-              Back to Dashboard
-            </button>
-            <button
-              onClick={() => window.location.reload()}
-              className="w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md font-medium"
-            >
-              Retake Quiz
-            </button>
+            {!isUserExit && (
+              <button
+                onClick={() => router.push('/student/dashboard')}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md font-medium"
+              >
+                Back to Dashboard
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -155,14 +317,21 @@ export default function QuizTaker({ quizId }: QuizTakerProps) {
           <div className="flex justify-between h-16">
             <div className="flex items-center">
               <button
-                onClick={() => router.push('/student/dashboard')}
+                onClick={handleBackToDashboard}
                 className="text-indigo-600 hover:text-indigo-500 mr-4"
               >
                 ← Back to Dashboard
               </button>
               <h1 className="text-xl font-semibold text-gray-900">{quiz.title}</h1>
             </div>
-            <div className="flex items-center">
+            <div className="flex items-center space-x-4">
+              <div className={`px-3 py-1 rounded-lg text-sm font-medium ${
+                timeLeft <= 300 ? 'bg-red-100 text-red-800' : 
+                timeLeft <= 900 ? 'bg-yellow-100 text-yellow-800' : 
+                'bg-green-100 text-green-800'
+              }`}>
+                ⏰ {formatTime(timeLeft)}
+              </div>
               <span className="text-gray-700">
                 Question {currentQuestion + 1} of {quiz.questions.length}
               </span>
@@ -208,12 +377,6 @@ export default function QuizTaker({ quizId }: QuizTakerProps) {
                     </span>
                   </label>
                 ))}
-              </div>
-            )}
-
-            {currentQ.type === 'multiple-choice' && !currentQ.options && (
-              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <p className="text-yellow-800">⚠️ This question is missing answer options. Please contact your instructor.</p>
               </div>
             )}
 

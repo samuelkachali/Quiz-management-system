@@ -128,3 +128,43 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { success: false, message: 'No token provided' },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.substring(7);
+    const decoded = verifyToken(token);
+    if (!decoded || decoded.role !== 'student') {
+      return NextResponse.json(
+        { success: false, message: 'Student access required' },
+        { status: 403 }
+      );
+    }
+
+    const { error } = await supabase
+      .from('quiz_attempts')
+      .delete()
+      .eq('student_id', decoded.id);
+
+    if (error) {
+      return NextResponse.json(
+        { success: false, message: 'Failed to clear history' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true, message: 'History cleared successfully' });
+  } catch (error) {
+    return NextResponse.json(
+      { success: false, message: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}

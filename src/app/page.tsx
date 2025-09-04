@@ -1,136 +1,123 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
 
 export default function Home() {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 relative overflow-hidden">
-      {/* Subtle background elements */}
-      <div className="absolute inset-0">
-        <div className="absolute top-10 right-10 w-80 h-80 bg-blue-200/20 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-10 left-10 w-80 h-80 bg-indigo-200/20 rounded-full blur-3xl"></div>
-      </div>
+  const [selectedRole, setSelectedRole] = useState<'admin' | 'student' | null>(null);
 
-      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-6">
-        {/* Header Section */}
-        <div className="text-center mb-12 max-w-3xl">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-xl mb-6 shadow-md">
-            <span className="text-white text-2xl font-bold">Q</span>
-          </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-slate-800 mb-4">
-            Quiz Management System
-          </h1>
-          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-            A modern platform for creating, managing, and taking quizzes. 
-            Designed for educators and students to enhance the learning experience.
-          </p>
-        </div>
+  const resetSelection = () => {
+    setSelectedRole(null);
+  };
 
-        {/* Main Cards */}
-        <div className="grid lg:grid-cols-2 gap-6 max-w-4xl w-full mb-12">
-          {/* Admin Portal */}
-          <div className="bg-white rounded-2xl p-6 shadow-md border border-gray-100 hover:shadow-lg transition-shadow">
-            <div className="text-center">
-              <div className="w-14 h-14 bg-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h2 className="text-2xl font-bold text-slate-800 mb-3">Admin Portal</h2>
-              <p className="text-slate-600 mb-6">
-                Create and manage quizzes, monitor student performance, and oversee the learning ecosystem.
-              </p>
-              <div className="space-y-3">
-                <Link
-                  href="/admin/login"
-                  className="block w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-xl transition-colors"
-                >
-                  Sign In as Admin
-                </Link>
-                <Link
-                  href="/admin/signup"
-                  className="block w-full border border-gray-300 text-slate-700 hover:border-blue-500 hover:text-blue-600 font-medium py-3 px-6 rounded-xl transition-colors"
-                >
-                  Request Admin Access
-                </Link>
-              </div>
+  if (selectedRole === null) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-6">
+        <div className="max-w-2xl w-full">
+          {/* Header Section */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-xl mb-4 shadow-lg">
+              <span className="text-white text-2xl font-bold">Q</span>
             </div>
+            <h1 className="text-3xl md:text-4xl font-bold text-slate-800 mb-3">
+              Quiz Management System
+            </h1>
+            <p className="text-slate-600 max-w-xl mx-auto mb-8">
+              Create, manage, and take quizzes with our modern platform designed for educators and students.
+            </p>
           </div>
 
-          {/* Student Portal */}
-          <div className="bg-white rounded-2xl p-6 shadow-md border border-gray-100 hover:shadow-lg transition-shadow">
-            <div className="text-center">
-              <div className="w-14 h-14 bg-indigo-600 rounded-xl flex items-center justify-center mx-auto mb-4">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
-              </div>
-              <h2 className="text-2xl font-bold text-slate-800 mb-3">Student Portal</h2>
-              <p className="text-slate-600 mb-6">
-                Access your quizzes, track your progress, and enhance your learning journey.
-              </p>
-              <div className="space-y-3">
-                <Link
-                  href="/student/login"
-                  className="block w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-xl transition-colors"
-                >
-                  Sign In as Student
-                </Link>
-                <Link
-                  href="/student/signup"
-                  className="block w-full border border-gray-300 text-slate-700 hover:border-indigo-500 hover:text-indigo-600 font-medium py-3 px-6 rounded-xl transition-colors"
-                >
-                  Create Student Account
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Demo Credentials */}
-        <div className="max-w-3xl w-full">
-          <div className="bg-white rounded-2xl p-6 shadow-md border border-gray-100">
-            <div className="text-center mb-6">
-              <h3 className="text-xl font-bold text-slate-800 mb-2">Demo Credentials</h3>
-              <p className="text-slate-600">Use these credentials to explore the platform</p>
-            </div>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
-                <div className="flex items-center justify-center w-10 h-10 bg-blue-600 rounded-lg mb-3 mx-auto">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          {/* Role Selection */}
+          <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
+            <h2 className="text-xl font-bold text-slate-800 mb-4 text-center">Choose Your Role</h2>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                onClick={() => setSelectedRole('admin')}
+                className="p-6 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all duration-300 group"
+              >
+                <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                 </div>
-                <h4 className="font-bold text-slate-800 mb-3 text-center">Super Admin</h4>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between p-2 bg-white rounded-lg">
-                    <span className="text-sm text-slate-700">Email:</span>
-                    <code className="bg-blue-100 px-2 py-1 rounded text-blue-800 text-sm">admin@quiz.com</code>
-                  </div>
-                  <div className="flex items-center justify-between p-2 bg-white rounded-lg">
-                    <span className="text-sm text-slate-700">Password:</span>
-                    <code className="bg-blue-100 px-2 py-1 rounded text-blue-800 text-sm">admin123</code>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-indigo-50 rounded-xl p-4 border border-indigo-100">
-                <div className="flex items-center justify-center w-10 h-10 bg-indigo-600 rounded-lg mb-3 mx-auto">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <h3 className="font-bold text-slate-800 mb-1">Admin</h3>
+                <p className="text-sm text-slate-600">Create & manage quizzes</p>
+              </button>
+              
+              <button
+                onClick={() => setSelectedRole('student')}
+                className="p-6 border-2 border-gray-200 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition-all duration-300 group"
+              >
+                <div className="w-12 h-12 bg-indigo-600 rounded-lg flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                   </svg>
                 </div>
-                <h4 className="font-bold text-slate-800 mb-3 text-center">Student</h4>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between p-2 bg-white rounded-lg">
-                    <span className="text-sm text-slate-700">Email:</span>
-                    <code className="bg-indigo-100 px-2 py-1 rounded text-indigo-800 text-sm">student@quiz.com</code>
-                  </div>
-                  <div className="flex items-center justify-between p-2 bg-white rounded-lg">
-                    <span className="text-sm text-slate-700">Password:</span>
-                    <code className="bg-indigo-100 px-2 py-1 rounded text-indigo-800 text-sm">student123</code>
-                  </div>
-                </div>
-              </div>
+                <h3 className="font-bold text-slate-800 mb-1">Student</h3>
+                <p className="text-sm text-slate-600">Take quizzes & track progress</p>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-6">
+      <div className="max-w-md w-full">
+        {/* Header Section */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-xl mb-4 shadow-lg">
+            <span className="text-white text-2xl font-bold">Q</span>
+          </div>
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-800 mb-2">
+            {selectedRole === 'admin' ? 'Admin Portal' : 'Student Portal'}
+          </h1>
+          <p className="text-slate-600 text-sm mb-4">
+            {selectedRole === 'admin' 
+              ? 'Create quizzes and manage student performance' 
+              : 'Take quizzes and track your learning progress'
+            }
+          </p>
+          <button
+            onClick={resetSelection}
+            className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+          >
+            ← Change Role
+          </button>
+        </div>
+
+        {/* Login/Signup Card */}
+        <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
+          <div className="text-center">
+            <div className={`w-12 h-12 ${selectedRole === 'admin' ? 'bg-blue-600' : 'bg-indigo-600'} rounded-lg flex items-center justify-center mx-auto mb-4`}>
+              {selectedRole === 'admin' ? (
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              ) : (
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+              )}
+            </div>
+            
+            <div className="space-y-3">
+              <Link
+                href={selectedRole === 'admin' ? '/admin/login' : '/student/login'}
+                className={`block w-full ${selectedRole === 'admin' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-indigo-600 hover:bg-indigo-700'} text-white font-medium py-3 px-4 rounded-lg transition-colors`}
+              >
+                {selectedRole === 'admin' ? 'Admin Login' : 'Student Login'}
+              </Link>
+              <Link
+                href={selectedRole === 'admin' ? '/admin/signup' : '/student/signup'}
+                className={`block w-full border ${selectedRole === 'admin' ? 'border-blue-200 text-blue-600 hover:bg-blue-50' : 'border-indigo-200 text-indigo-600 hover:bg-indigo-50'} font-medium py-3 px-4 rounded-lg transition-colors`}
+              >
+                {selectedRole === 'admin' ? 'Request Access' : 'Create Account'}
+              </Link>
             </div>
           </div>
         </div>

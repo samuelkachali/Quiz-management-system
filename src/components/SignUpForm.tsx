@@ -2,11 +2,73 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
 
 interface SignUpFormProps {
   userType: 'admin' | 'student';
 }
+
+// Validation functions
+const validatePassword = (password: string): { isValid: boolean; errors: string[] } => {
+  const errors: string[] = [];
+  
+  if (password.length < 8) {
+    errors.push('Password must be at least 8 characters long');
+  }
+  if (!/[A-Z]/.test(password)) {
+    errors.push('Password must contain at least one uppercase letter');
+  }
+  if (!/[a-z]/.test(password)) {
+    errors.push('Password must contain at least one lowercase letter');
+  }
+  if (!/\d/.test(password)) {
+    errors.push('Password must contain at least one number');
+  }
+  if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+    errors.push('Password must contain at least one special character');
+  }
+  
+  return { isValid: errors.length === 0, errors };
+};
+
+const validateEmail = (email: string): { isValid: boolean; error?: string } => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return { isValid: false, error: 'Please enter a valid email address' };
+  }
+  
+  // Valid email domains
+  const validDomains = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'edu', 'org', 'gov'];
+  const domain = email.split('@')[1]?.toLowerCase();
+  
+  const isValidDomain = validDomains.some(validDomain => 
+    domain === validDomain || domain?.endsWith('.' + validDomain)
+  );
+  
+  if (!isValidDomain) {
+    return { 
+      isValid: false, 
+      error: 'Please use a valid email domain (gmail.com, yahoo.com, outlook.com, .edu, .org, .gov, etc.)' 
+    };
+  }
+  
+  return { isValid: true };
+};
+
+const validateName = (name: string): { isValid: boolean; error?: string } => {
+  if (name.length < 2) {
+    return { isValid: false, error: 'Name must be at least 2 characters long' };
+  }
+  
+  if (/\d/.test(name)) {
+    return { isValid: false, error: 'Name cannot contain numbers' };
+  }
+  
+  if (!/^[a-zA-Z\s'-]+$/.test(name)) {
+    return { isValid: false, error: 'Name can only contain letters, spaces, hyphens, and apostrophes' };
+  }
+  
+  return { isValid: true };
+};
 
 export default function SignUpForm({ userType }: SignUpFormProps) {
   const [email, setEmail] = useState('');
@@ -15,7 +77,37 @@ export default function SignUpForm({ userType }: SignUpFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [validationErrors, setValidationErrors] = useState<{
+    name?: string;
+    email?: string;
+    password?: string[];
+  }>({});
   const router = useRouter();
+
+  const validateForm = () => {
+    const errors: typeof validationErrors = {};
+    
+    // Validate name
+    const nameValidation = validateName(name);
+    if (!nameValidation.isValid) {
+      errors.name = nameValidation.error;
+    }
+    
+    // Validate email
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.isValid) {
+      errors.email = emailValidation.error;
+    }
+    
+    // Validate password
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.isValid) {
+      errors.password = passwordValidation.errors;
+    }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,56 +115,55 @@ export default function SignUpForm({ userType }: SignUpFormProps) {
     setError('');
     setSuccess('');
 
+    if (!validateForm()) {
+      setLoading(false);
+      return;
+    }
+
     try {
-      // Sign up with Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name,
-            role: userType,
-            status: userType === 'admin' ? 'pending' : 'active'
-          }
-        }
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email.toLowerCase().trim(),
+          password,
+          name: name.trim(),
+          role: userType,
+        }),
       });
 
-      if (authError) {
-        setError(authError.message);
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.message || 'Failed to create account');
         return;
       }
 
-      if (authData.user) {
-        // Insert user into our users table
-        const { error: dbError } = await supabase
-          .from('users')
-          .insert({
-            id: authData.user.id,
-            email,
-            name,
-            role: userType,
-            status: userType === 'admin' ? 'pending' : 'active'
-          });
-
-        if (dbError) {
-          setError('Failed to create user profile');
-          return;
-        }
-
-        if (userType === 'admin') {
-          setSuccess('Admin account request submitted! Please wait for approval before signing in.');
-        } else {
-          setSuccess('Account created successfully! You can now sign in.');
-          setTimeout(() => {
-            router.push('/student/login');
-          }, 2000);
-        }
+      if (userType === 'admin') {
+        setSuccess('Admin account request submitted! Please wait for approval before signing in.');
+      } else {
+        setSuccess('Account created successfully! You can now sign in.');
+        setTimeout(() => {
+          router.push('/student/login');
+        }, 2000);
       }
     } catch (error) {
       setError('An error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const getPasswordStrength = () => {
+    const validation = validatePassword(password);
+    const strength = 5 - validation.errors.length;
+    if (strength <= 1) return { label: 'Very Weak', color: 'bg-red-500' };
+    if (strength <= 2) return { label: 'Weak', color: 'bg-orange-500' };
+    if (strength <= 3) return { label: 'Fair', color: 'bg-yellow-500' };
+    if (strength <= 4) return { label: 'Good', color: 'bg-blue-500' };
+    return { label: 'Strong', color: 'bg-green-500' };
   };
 
   return (
@@ -116,9 +207,14 @@ export default function SignUpForm({ userType }: SignUpFormProps) {
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 ${
+                validationErrors.name ? 'border-red-300' : 'border-gray-300'
+              }`}
               placeholder="Enter your full name"
             />
+            {validationErrors.name && (
+              <p className="mt-1 text-sm text-red-600">{validationErrors.name}</p>
+            )}
           </div>
           
           <div>
@@ -132,9 +228,14 @@ export default function SignUpForm({ userType }: SignUpFormProps) {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 ${
+                validationErrors.email ? 'border-red-300' : 'border-gray-300'
+              }`}
               placeholder="Enter your email"
             />
+            {validationErrors.email && (
+              <p className="mt-1 text-sm text-red-600">{validationErrors.email}</p>
+            )}
           </div>
           
           <div>
@@ -146,12 +247,46 @@ export default function SignUpForm({ userType }: SignUpFormProps) {
               name="password"
               type="password"
               required
-              minLength={6}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              placeholder="Enter your password (min 6 characters)"
+              className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 ${
+                validationErrors.password ? 'border-red-300' : 'border-gray-300'
+              }`}
+              placeholder="Enter a strong password"
             />
+            
+            {password && (
+              <div className="mt-2">
+                <div className="flex items-center space-x-2">
+                  <div className="flex-1 bg-gray-200 rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full transition-all duration-300 ${getPasswordStrength().color}`}
+                      style={{ width: `${((5 - validatePassword(password).errors.length) / 5) * 100}%` }}
+                    ></div>
+                  </div>
+                  <span className="text-xs text-gray-600">{getPasswordStrength().label}</span>
+                </div>
+              </div>
+            )}
+            
+            {validationErrors.password && (
+              <div className="mt-2 space-y-1">
+                {validationErrors.password.map((error, index) => (
+                  <p key={index} className="text-sm text-red-600">• {error}</p>
+                ))}
+              </div>
+            )}
+            
+            <div className="mt-2 text-xs text-gray-500">
+              <p>Password must contain:</p>
+              <ul className="list-disc list-inside space-y-1 mt-1">
+                <li>At least 8 characters</li>
+                <li>One uppercase letter</li>
+                <li>One lowercase letter</li>
+                <li>One number</li>
+                <li>One special character</li>
+              </ul>
+            </div>
           </div>
           
           <button

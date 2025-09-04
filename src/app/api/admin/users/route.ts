@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '../../../../lib/supabase';
 import { verifyToken } from '../../../../../backend/utils/auth';
+import { sendEmail, generateAdminApprovalEmail } from '../../../../lib/email';
 
 
 export async function GET(request: NextRequest) {
@@ -63,9 +64,10 @@ export async function PATCH(request: NextRequest) {
     const token = authHeader.substring(7);
     const decoded = verifyToken(token);
     
-    if (!decoded || (decoded.role !== 'admin' && decoded.role !== 'super_admin')) {
+    // Only super admins can approve/reject admin requests
+    if (!decoded || decoded.role !== 'super_admin') {
       return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
+        { success: false, message: 'Only super administrators can approve admin requests' },
         { status: 403 }
       );
     }
@@ -81,6 +83,23 @@ export async function PATCH(request: NextRequest) {
 
     console.log('Updating user status:', { userId, status, by: decoded.email });
 
+    // Get user details before updating for email notification
+    const { data: userData, error: fetchError } = await supabase
+      .from('users')
+      .select('email, name, role')
+      .eq('id', userId)
+      .single();
+
+    if (fetchError || !userData) {
+      return NextResponse.json(
+        { success: false, message: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    // Only send email for admin role approvals
+    const shouldSendEmail = userData.role === 'admin' && status === 'active';
+
     // Update user status
     const { error } = await supabase
       .from('users')
@@ -93,9 +112,29 @@ export async function PATCH(request: NextRequest) {
       throw error;
     }
 
+    // Send email notification for admin approvals
+    if (shouldSendEmail) {
+      try {
+        const emailHtml = generateAdminApprovalEmail(userData.name, userData.email);
+        const emailSent = await sendEmail({
+          to: userData.email,
+          subject: 'Admin Access Approved - Quiz Management System',
+          html: emailHtml
+        });
+
+        console.log('Email notification sent:', { 
+          to: userData.email, 
+          sent: emailSent 
+        });
+      } catch (emailError) {
+        console.error('Failed to send email notification:', emailError);
+        // Don't fail the approval if email fails
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      message: `User ${status === 'active' ? 'approved' : 'rejected'} successfully`
+      message: `User ${status === 'active' ? 'approved' : 'rejected'} successfully${shouldSendEmail ? ' and notification email sent' : ''}`
     });
   } catch (error) {
     console.error('User update API error:', error);

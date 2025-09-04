@@ -23,6 +23,7 @@ export interface Quiz {
   passingScore: number; // percentage (e.g., 60 for 60%)
   createdBy: string;
   createdAt: Date;
+  updatedAt?: Date;
 }
 
 export interface QuizAttempt {
