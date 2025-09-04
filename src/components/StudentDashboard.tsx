@@ -101,7 +101,7 @@ export default function StudentDashboard() {
   };
 
   const getQuizAttempt = (quizId: string) => {
-    const quizAttempts = attempts.filter(attempt => (attempt.quizId || attempt.quiz_id) === quizId);
+    const quizAttempts = attempts.filter(attempt => (attempt.quizId || attempt.quizId) === quizId);
     if (quizAttempts.length === 0) return undefined;
     
     return quizAttempts.sort((a, b) => {
@@ -370,7 +370,7 @@ export default function StudentDashboard() {
         <div className="bg-white/70 backdrop-blur-sm shadow-lg overflow-hidden rounded-xl border border-white/20">
           <ul className="divide-y divide-gray-200/50">
             {attempts.map((attempt) => {
-              const quiz = quizzes.find(q => q.id === (attempt.quizId || attempt.quiz_id));
+              const quiz = quizzes.find(q => q.id === (attempt.quizId || attempt.quizId));
               const isPassed = attempt.score >= 50;
               const formatDate = (dateStr: string | Date) => {
                 try {
@@ -398,7 +398,7 @@ export default function StudentDashboard() {
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
-                            <span>Completed: {formatDate(attempt.completedAt || attempt.completed_at)}</span>
+                            <span>Completed: {formatDate(attempt.completedAt || attempt.completedAt)}</span>
                           </p>
                         </div>
                       </div>
