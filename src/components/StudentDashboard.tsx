@@ -11,6 +11,7 @@ export default function StudentDashboard() {
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState<'home' | 'available' | 'history'>('home');
   const router = useRouter();
+  const [oldHistoryPage, setOldHistoryPage] = useState(0);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -101,7 +102,7 @@ export default function StudentDashboard() {
   };
 
   const getQuizAttempt = (quizId: string) => {
-    const quizAttempts = attempts.filter(attempt => (attempt.quizId || attempt.quizId) === quizId);
+    const quizAttempts = attempts.filter(attempt => (attempt.quizId || (attempt as any).quiz_id) === quizId);
     if (quizAttempts.length === 0) return undefined;
     
     return quizAttempts.sort((a, b) => {
@@ -248,7 +249,7 @@ export default function StudentDashboard() {
   );
 
   const renderAvailableQuizzes = () => {
-    const availableQuizzes = getAvailableQuizzes();
+    const availableQuizzes = quizzes; // Show ALL quizzes, not just filtered ones
     
     return (
       <div className="space-y-8">
@@ -267,7 +268,7 @@ export default function StudentDashboard() {
             <span>Back to Dashboard</span>
           </button>
         </div>
-
+  
         {availableQuizzes.length === 0 ? (
           <div className="text-center py-16">
             <div className="w-24 h-24 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -275,14 +276,16 @@ export default function StudentDashboard() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No available quizzes</h3>
-            <p className="text-gray-500">All quizzes have been completed or check back later for new ones!</p>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">No quizzes available</h3>
+            <p className="text-gray-500">Check back later for new quizzes!</p>
           </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {availableQuizzes.map((quiz) => {
               const attempt = getQuizAttempt(quiz.id);
               const isUpdated = isQuizUpdatedAfterAttempt(quiz, attempt);
+              const isCompleted = attempt && !isUpdated;
+              
               return (
                 <div key={quiz.id} className="bg-white/70 backdrop-blur-sm overflow-hidden shadow-lg rounded-xl border border-white/20 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
                   <div className="p-6">
@@ -292,6 +295,15 @@ export default function StudentDashboard() {
                         {isUpdated && (
                           <div className="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 mb-2">
                             🔄 Updated Quiz
+                          </div>
+                        )}
+                        {isCompleted && (
+                          <div className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            attempt.score >= quiz.passingScore 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {attempt.score >= quiz.passingScore ? '✓ PASSED' : '✗ FAILED'}
                           </div>
                         )}
                       </div>
@@ -312,6 +324,14 @@ export default function StudentDashboard() {
                       </div>
                     </div>
                     
+                    {isCompleted && (
+                      <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                        <div className="text-sm text-gray-600">
+                          Last Score: <span className="font-semibold text-gray-900">{attempt.score}%</span>
+                        </div>
+                      </div>
+                    )}
+                    
                     {attempt && isUpdated && (
                       <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
                         <div className="text-sm text-blue-800">
@@ -324,9 +344,17 @@ export default function StudentDashboard() {
                     
                     <button
                       onClick={() => router.push(`/student/quiz/${quiz.id}`)}
-                      className="w-full px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white"
+                      disabled={isCompleted}
+                      className={`w-full px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg ${
+                        isCompleted
+                          ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                          : isUpdated
+                          ? 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white'
+                          : 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white'
+                      }`}
                     >
-                      {isUpdated ? 'Retake Updated Quiz' : 'Start Quiz'}
+                      {isCompleted ? 'Already Attempted' : 
+                       isUpdated ? 'Retake Updated Quiz' : 'Start Quiz'}
                     </button>
                   </div>
                 </div>
@@ -338,95 +366,211 @@ export default function StudentDashboard() {
     );
   };
 
-  const renderQuizHistory = () => (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Quiz History</h2>
-          <p className="text-gray-600">Track your progress and review past attempts</p>
-        </div>
-        <button
-          onClick={() => setActiveView('home')}
-          className="flex items-center space-x-2 text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-          <span>Back to Dashboard</span>
-        </button>
-      </div>
-
-      {attempts.length === 0 ? (
-        <div className="text-center py-16">
-          <div className="w-24 h-24 bg-gradient-to-r from-emerald-100 to-teal-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg className="w-12 h-12 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2-2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
+  const renderQuizHistory = () => {
+    const cutoffDate = new Date('2025-09-03'); // 03/09/2025
+    const itemsPerPage = 3;
+  
+    // Separate attempts into recent and old
+    const recentAttempts = attempts.filter(attempt => {
+      const attemptDate = new Date(attempt.completedAt || (attempt as any).completed_at);
+      return attemptDate > cutoffDate;
+    });
+  
+    const oldAttempts = attempts.filter(attempt => {
+      const attemptDate = new Date(attempt.completedAt || (attempt as any).completed_at);
+      return attemptDate <= cutoffDate;
+    });
+  
+    const totalOldPages = Math.ceil(oldAttempts.length / itemsPerPage);
+    const paginatedOldAttempts = oldAttempts.slice(
+      oldHistoryPage * itemsPerPage,
+      (oldHistoryPage + 1) * itemsPerPage
+    );
+  
+    const formatDate = (dateStr: string | Date) => {
+      try {
+        const date = new Date(dateStr);
+        return isNaN(date.getTime()) ? 'Invalid Date' : date.toLocaleDateString();
+      } catch {
+        return 'Invalid Date';
+      }
+    };
+  
+    const renderAttemptCard = (attempt: any) => {
+      const quiz = quizzes.find(q => q.id === (attempt.quizId || (attempt as any).quiz_id));
+      const isPassed = attempt.score >= 50;
+  
+      return (
+        <li key={attempt.id} className="px-6 py-5 hover:bg-gray-50/50 transition-colors duration-200">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-base font-semibold text-gray-900">
+                    {quiz?.title || 'Unknown Quiz'}
+                  </p>
+                  <p className="text-sm text-gray-500 flex items-center space-x-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span>Completed: {formatDate(attempt.completedAt || (attempt as any).completed_at)}</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="text-right">
+                <div className="text-lg font-bold text-gray-900">
+                  {attempt.score}%
+                </div>
+                <div className="text-xs text-gray-500">Score</div>
+              </div>
+              <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
+                isPassed 
+                  ? 'bg-green-100 text-green-800' 
+                  : 'bg-red-100 text-red-800'
+              }`}>
+                {isPassed ? '✓ PASSED' : '✗ FAILED'}
+              </span>
+            </div>
           </div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">No quiz history yet</h3>
-          <p className="text-gray-500">Complete some quizzes to see your progress here!</p>
+        </li>
+      );
+    };
+  
+    return (
+      <div className="space-y-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Quiz History</h2>
+            <p className="text-gray-600">Track your progress and review past attempts</p>
+          </div>
+          <button
+            onClick={() => setActiveView('home')}
+            className="flex items-center space-x-2 text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            <span>Back to Dashboard</span>
+          </button>
         </div>
-      ) : (
-        <div className="bg-white/70 backdrop-blur-sm shadow-lg overflow-hidden rounded-xl border border-white/20">
-          <ul className="divide-y divide-gray-200/50">
-            {attempts.map((attempt) => {
-              const quiz = quizzes.find(q => q.id === (attempt.quizId || attempt.quizId));
-              const isPassed = attempt.score >= 50;
-              const formatDate = (dateStr: string | Date) => {
-                try {
-                  const date = new Date(dateStr);
-                  return isNaN(date.getTime()) ? 'Invalid Date' : date.toLocaleDateString();
-                } catch {
-                  return 'Invalid Date';
-                }
-              };
-              return (
-                <li key={attempt.id} className="px-6 py-5 hover:bg-gray-50/50 transition-colors duration-200">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-lg flex items-center justify-center">
-                          <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
+  
+        {attempts.length === 0 ? (
+          <div className="text-center py-16">
+            <div className="w-24 h-24 bg-gradient-to-r from-emerald-100 to-teal-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg className="w-12 h-12 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2-2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">No quiz history yet</h3>
+            <p className="text-gray-500">Complete some quizzes to see your progress here!</p>
+          </div>
+        ) : (
+          <div className="space-y-8">
+            {/* Recent History Section */}
+            {recentAttempts.length > 0 && (
+              <div>
+                <div className="mb-4">
+                  <h3 className="text-xl font-bold text-gray-900 mb-2 flex items-center">
+                    <div className="w-2 h-2 bg-green-400 rounded-full mr-3"></div>
+                    Recent History ({recentAttempts.length} attempts)
+                  </h3>
+                  <p className="text-gray-600">Your latest quiz attempts</p>
+                </div>
+                <div className="bg-white/70 backdrop-blur-sm shadow-lg overflow-hidden rounded-xl border border-white/20">
+                  <ul className="divide-y divide-gray-200/50">
+                    {recentAttempts.map(renderAttemptCard)}
+                  </ul>
+                </div>
+              </div>
+            )}
+  
+            {/* Old History Section */}
+            {oldAttempts.length > 0 && (
+              <div>
+                <div className="mb-4">
+                  <h3 className="text-xl font-bold text-gray-900 mb-2 flex items-center">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full mr-3"></div>
+                    Old History ({oldAttempts.length} attempts)
+                  </h3>
+                  <p className="text-gray-600">Quiz attempts from before September 3rd, 2025</p>
+                </div>
+                <div className="bg-white/70 backdrop-blur-sm shadow-lg overflow-hidden rounded-xl border border-white/20">
+                  <ul className="divide-y divide-gray-200/50">
+                    {paginatedOldAttempts.map(renderAttemptCard)}
+                  </ul>
+                  
+                  {/* Pagination Controls */}
+                  {totalOldPages > 1 && (
+                    <div className="px-6 py-4 bg-gray-50/50 border-t border-gray-200/50">
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm text-gray-600">
+                          Showing {oldHistoryPage * itemsPerPage + 1} to {Math.min((oldHistoryPage + 1) * itemsPerPage, oldAttempts.length)} of {oldAttempts.length} attempts
                         </div>
-                        <div>
-                          <p className="text-base font-semibold text-gray-900">
-                            {quiz?.title || 'Unknown Quiz'}
-                          </p>
-                          <p className="text-sm text-gray-500 flex items-center space-x-1">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => setOldHistoryPage(Math.max(0, oldHistoryPage - 1))}
+                            disabled={oldHistoryPage === 0}
+                            className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                              oldHistoryPage === 0
+                                ? 'text-gray-400 cursor-not-allowed'
+                                : 'text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50'
+                            }`}
+                          >
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                             </svg>
-                            <span>Completed: {formatDate(attempt.completedAt || attempt.completedAt)}</span>
-                          </p>
+                            Previous
+                          </button>
+                          
+                          <div className="flex items-center space-x-1">
+                            {Array.from({ length: totalOldPages }, (_, i) => (
+                              <button
+                                key={i}
+                                onClick={() => setOldHistoryPage(i)}
+                                className={`w-8 h-8 text-sm font-medium rounded-lg transition-colors ${
+                                  i === oldHistoryPage
+                                    ? 'bg-indigo-600 text-white'
+                                    : 'text-gray-600 hover:text-indigo-600 hover:bg-indigo-50'
+                                }`}
+                              >
+                                {i + 1}
+                              </button>
+                            ))}
+                          </div>
+                          
+                          <button
+                            onClick={() => setOldHistoryPage(Math.min(totalOldPages - 1, oldHistoryPage + 1))}
+                            disabled={oldHistoryPage === totalOldPages - 1}
+                            className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                              oldHistoryPage === totalOldPages - 1
+                                ? 'text-gray-400 cursor-not-allowed'
+                                : 'text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50'
+                            }`}
+                          >
+                            Next
+                            <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </button>
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="text-right">
-                        <div className="text-lg font-bold text-gray-900">
-                          {attempt.score}%
-                        </div>
-                        <div className="text-xs text-gray-500">Score</div>
-                      </div>
-                      <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
-                        isPassed 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {isPassed ? '✓ PASSED' : '✗ FAILED'}
-                      </span>
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
-    </div>
-  );
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">

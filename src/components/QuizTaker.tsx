@@ -20,6 +20,16 @@ export default function QuizTaker({ quizId }: QuizTakerProps) {
   const [quizStarted, setQuizStarted] = useState(false);
   const hasSubmittedRef = useRef(false);
   const router = useRouter();
+   // Auto-navigate after user exit submission
+   useEffect(() => {
+    if (result && result.autoSubmitted && result.reason === 'user_exit') {
+      const timer = setTimeout(() => {
+        router.push('/student/dashboard');
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [result, router]);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -247,17 +257,6 @@ export default function QuizTaker({ quizId }: QuizTakerProps) {
       </div>
     );
   }
-
-  // Auto-navigate after user exit submission
-  useEffect(() => {
-    if (result && result.autoSubmitted && result.reason === 'user_exit') {
-      const timer = setTimeout(() => {
-        router.push('/student/dashboard');
-      }, 2000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [result, router]);
 
   if (result) {
     const isPassed = result.attempt.score >= 50;
