@@ -299,11 +299,11 @@ export default function StudentDashboard() {
                         )}
                         {isCompleted && (
                           <div className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            attempt.score >= quiz.passingScore 
+                            attempt.score >= 50
                               ? 'bg-green-100 text-green-800' 
                               : 'bg-red-100 text-red-800'
                           }`}>
-                            {attempt.score >= quiz.passingScore ? '✓ PASSED' : '✗ FAILED'}
+                            {attempt.score >= 50 ? '✓ PASSED' : '✗ FAILED'}
                           </div>
                         )}
                       </div>
