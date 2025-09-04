@@ -375,7 +375,7 @@ export default function AdminDashboard() {
                 <h3 className="text-lg font-medium text-gray-800 mb-4">Recent Quiz Activity</h3>
                 <div className="space-y-3">
                   {attempts.slice(-5).reverse().map((attempt) => {
-                    const quiz = quizzes.find(q => q.id === (attempt.quizId || attempt.quizId));
+                    const quiz = quizzes.find(q => q.id === (attempt.quizId || (attempt as any).quiz_id));
                     const isPassed = attempt.score >= 50;
                     const formatDate = (dateStr: string | Date) => {
                       try {
@@ -389,13 +389,13 @@ export default function AdminDashboard() {
                       <div key={attempt.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-200">
                         <div>
                           <p className="font-medium text-gray-800">{quiz?.title || 'Unknown Quiz'}</p>
-                          <p className="text-sm text-gray-600">Student ID: {attempt.studentId || attempt.studentId}</p>
+                          <p className="text-sm text-gray-600">Student ID: {attempt.studentId || (attempt as any).student_id}</p>
                         </div>
                         <div className="text-right">
                           <p className={`font-bold ${isPassed ? 'text-green-600' : 'text-red-600'}`}>
                             {attempt.score}% - {isPassed ? 'PASSED' : 'FAILED'}
                           </p>
-                          <p className="text-sm text-gray-500">{formatDate(attempt.completedAt || attempt.completedAt)}</p>
+                          <p className="text-sm text-gray-500">{formatDate(attempt.completedAt || (attempt as any).completed_at)}</p>
                         </div>
                       </div>
                     );
@@ -538,7 +538,7 @@ export default function AdminDashboard() {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {attempts.map((attempt) => {
-                        const quiz = quizzes.find(q => q.id === (attempt.quizId || attempt.quizId));
+                        const quiz = quizzes.find(q => q.id === (attempt.quizId || (attempt as any).quiz_id));
                         const isPassed = attempt.score >= 50;
                         const formatDate = (dateStr: string | Date) => {
                           try {
@@ -551,7 +551,7 @@ export default function AdminDashboard() {
                         return (
                           <tr key={attempt.id} className="hover:bg-gray-50 transition-colors duration-150">
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">
-                              Student {attempt.studentId || attempt.studentId}
+                              Student {attempt.studentId || (attempt as any).student_id}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                               {quiz?.title || 'Unknown Quiz'}
@@ -567,7 +567,7 @@ export default function AdminDashboard() {
                               </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {formatDate(attempt.completedAt || attempt.completedAt)}
+                              {formatDate(attempt.completedAt || (attempt as any).completed_at)}
                             </td>
                           </tr>
                         );
@@ -583,8 +583,8 @@ export default function AdminDashboard() {
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
               <h3 className="text-lg font-medium text-gray-800 mb-4">Student Performance Summary</h3>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {Array.from(new Set(attempts.map(a => a.studentId || a.studentId))).map((studentId) => {
-                  const studentAttempts = attempts.filter(a => (a.studentId || a.studentId) === studentId);
+                {Array.from(new Set(attempts.map(a => a.studentId || (a as any).student_id))).map((studentId) => {
+                  const studentAttempts = attempts.filter(a => (a.studentId || (a as any).student_id) === studentId);
                   const totalScore = studentAttempts.reduce((sum, a) => sum + a.score, 0);
                   const avgScore = Math.round(totalScore / studentAttempts.length);
                   const passedCount = studentAttempts.filter(a => a.score >= 50).length;
