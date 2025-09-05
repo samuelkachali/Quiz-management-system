@@ -60,6 +60,8 @@ export default function EditQuizPage() {
   };
 
   const addQuestion = () => {
+    if (saving) return;
+    
     const newQuestion: Question = {
       id: Date.now().toString(),
       question: '',
@@ -67,13 +69,52 @@ export default function EditQuizPage() {
       options: ['', '', '', ''],
       correctAnswer: 0
     };
-    setQuestions([...questions, newQuestion]);
+    
+    setQuestions(prev => [...prev, newQuestion]);
+    
+    // Scroll to the newly added question after a short delay
+    setTimeout(() => {
+      const elements = document.querySelectorAll('[data-question]');
+      if (elements.length > 0) {
+        elements[elements.length - 1].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }, 100);
   };
 
   const updateQuestion = (index: number, field: keyof Question, value: any) => {
-    const updated = [...questions];
-    updated[index] = { ...updated[index], [field]: value };
-    setQuestions(updated);
+    setQuestions(prevQuestions => {
+      const updated = [...prevQuestions];
+      const currentQuestion = { ...updated[index] };
+      
+      if (field === 'type') {
+        const newType = value as 'multiple-choice' | 'true-false';
+        updated[index] = {
+          ...currentQuestion,
+          type: newType,
+          options: newType === 'true-false' ? ['True', 'False'] : (currentQuestion.options?.length ? currentQuestion.options : ['', '', '', '']),
+          correctAnswer: newType === 'true-false' ? 'true' : 0
+        };
+      } else if (field === 'correctAnswer') {
+        if (currentQuestion.type === 'true-false') {
+          updated[index] = {
+            ...currentQuestion,
+            correctAnswer: String(value)
+          };
+        } else {
+          updated[index] = {
+            ...currentQuestion,
+            correctAnswer: Number(value)
+          };
+        }
+      } else {
+        updated[index] = {
+          ...currentQuestion,
+          [field]: value
+        };
+      }
+      
+      return updated;
+    });
   };
 
   const updateOption = (questionIndex: number, optionIndex: number, value: string) => {
@@ -85,7 +126,11 @@ export default function EditQuizPage() {
   };
 
   const removeQuestion = (index: number) => {
-    setQuestions(questions.filter((_, i) => i !== index));
+    if (saving) return;
+    
+    if (window.confirm('Are you sure you want to remove this question?')) {
+      setQuestions(prev => prev.filter((_, i) => i !== index));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -145,9 +190,18 @@ export default function EditQuizPage() {
             <div className="flex items-center">
               <button
                 onClick={() => router.push('/admin/dashboard')}
-                className="text-indigo-600 hover:text-indigo-500 mr-4"
+                disabled={saving}
+                className="group inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-indigo-600 hover:text-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                ← Back to Dashboard
+                <svg 
+                  className={`-ml-1 mr-2 h-5 w-5 text-indigo-500 group-hover:text-indigo-600 transition-transform group-hover:-translate-x-0.5 ${saving ? 'opacity-50' : ''}`} 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                {saving ? 'Saving...' : 'Back to Dashboard'}
               </button>
               <h1 className="text-xl font-semibold text-gray-900">Edit Quiz</h1>
             </div>
@@ -213,7 +267,7 @@ export default function EditQuizPage() {
             </div>
 
             {questions.map((question, questionIndex) => (
-              <div key={question.id} className="border border-gray-200 rounded-lg p-4 mb-4">
+              <div key={question.id} data-question={questionIndex} className="border border-gray-200 rounded-lg p-4 mb-4 transition-all duration-200 hover:shadow-md">
                 <div className="flex justify-between items-start mb-4">
                   <h3 className="text-md font-medium text-gray-900">Question {questionIndex + 1}</h3>
                   <button

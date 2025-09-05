@@ -1,8 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Question } from '@/types';
+
+type Question = {
+  id: string;
+  question: string;
+  type: 'multiple-choice' | 'true-false';
+  options?: string[];
+  correctAnswer: number | string;
+};
 
 export default function QuizCreator() {
   const [title, setTitle] = useState('');
@@ -10,9 +17,18 @@ export default function QuizCreator() {
   const [passingScore, setPassingScore] = useState(60);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
+  
+  const handleNavigation = (path: string) => {
+    if (loading || isNavigating) return;
+    setIsNavigating(true);
+    router.push(path);
+  };
   const router = useRouter();
 
   const addQuestion = () => {
+    if (loading) return;
+    
     const newQuestion: Question = {
       id: Date.now().toString(),
       question: '',
@@ -20,13 +36,61 @@ export default function QuizCreator() {
       options: ['', '', '', ''],
       correctAnswer: 0
     };
-    setQuestions([...questions, newQuestion]);
+    
+    // Add a small delay for better UX
+    setLoading(true);
+    setTimeout(() => {
+      setQuestions([...questions, newQuestion]);
+      setLoading(false);
+      
+      // Scroll to the newly added question
+      setTimeout(() => {
+        const elements = document.querySelectorAll('[data-question]');
+        if (elements.length > 0) {
+          elements[elements.length - 1].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }, 50);
+    }, 150);
   };
 
   const updateQuestion = (index: number, field: keyof Question, value: any) => {
-    const updated = [...questions];
-    updated[index] = { ...updated[index], [field]: value };
-    setQuestions(updated);
+    setQuestions(prevQuestions => {
+      const updated = [...prevQuestions];
+      const currentQuestion = { ...updated[index] };
+      
+      if (field === 'type') {
+        const newType = value as 'multiple-choice' | 'true-false';
+        
+        // Create a new question object with the updated type and appropriate defaults
+        updated[index] = {
+          ...currentQuestion,
+          type: newType,
+          options: newType === 'true-false' ? ['True', 'False'] : ['', '', '', ''],
+          correctAnswer: newType === 'true-false' ? 'true' : 0
+        };
+      } else if (field === 'correctAnswer') {
+        // For true/false questions, ensure we're using string comparison
+        if (currentQuestion.type === 'true-false') {
+          updated[index] = {
+            ...currentQuestion,
+            correctAnswer: String(value)
+          };
+        } else {
+          // For multiple choice, use number for the index
+          updated[index] = {
+            ...currentQuestion,
+            correctAnswer: Number(value)
+          };
+        }
+      } else {
+        updated[index] = {
+          ...currentQuestion,
+          [field]: value
+        };
+      }
+      
+      return updated;
+    });
   };
 
   const updateOption = (questionIndex: number, optionIndex: number, value: string) => {
@@ -38,11 +102,22 @@ export default function QuizCreator() {
   };
 
   const removeQuestion = (index: number) => {
-    setQuestions(questions.filter((_, i) => i !== index));
+    if (loading) return;
+    
+    // Add confirmation dialog before removing
+    if (window.confirm('Are you sure you want to remove this question?')) {
+      setLoading(true);
+      setTimeout(() => {
+        setQuestions(questions.filter((_, i) => i !== index));
+        setLoading(false);
+      }, 100);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
+    
     if (questions.length === 0) {
       alert('Please add at least one question');
       return;
@@ -85,10 +160,26 @@ export default function QuizCreator() {
           <div className="flex justify-between h-16">
             <div className="flex items-center">
               <button
-                onClick={() => router.push('/admin/dashboard')}
-                className="text-indigo-600 hover:text-indigo-500 mr-4"
+                onClick={() => handleNavigation('/admin/dashboard')}
+                disabled={loading || isNavigating}
+                className="group flex items-center text-indigo-600 hover:text-indigo-500 mr-4 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
               >
-                ← Back to Dashboard
+                {isNavigating ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4 mr-1.5 group-hover:-translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    Back to Dashboard
+                  </>
+                )}
               </button>
               <h1 className="text-xl font-semibold text-gray-900">Create New Quiz</h1>
             </div>
@@ -147,21 +238,29 @@ export default function QuizCreator() {
               <button
                 type="button"
                 onClick={addQuestion}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+                disabled={loading}
+                className="inline-flex items-center bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
                 Add Question
               </button>
             </div>
 
             {questions.map((question, questionIndex) => (
-              <div key={question.id} className="border border-gray-200 rounded-lg p-4 mb-4">
+              <div key={question.id} data-question={questionIndex} className="border border-gray-200 rounded-lg p-4 mb-4 transition-all duration-200 hover:shadow-md">
                 <div className="flex justify-between items-start mb-4">
                   <h3 className="text-md font-medium text-gray-900">Question {questionIndex + 1}</h3>
                   <button
                     type="button"
                     onClick={() => removeQuestion(questionIndex)}
-                    className="text-red-600 hover:text-red-800 text-sm"
+                    disabled={loading}
+                    className="inline-flex items-center text-red-600 hover:text-red-800 text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
+                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
                     Remove
                   </button>
                 </div>
@@ -184,15 +283,8 @@ export default function QuizCreator() {
                     <select
                       value={question.type}
                       onChange={(e) => {
-                        const type = e.target.value as 'multiple-choice' | 'true-false';
-                        updateQuestion(questionIndex, 'type', type);
-                        if (type === 'true-false') {
-                          updateQuestion(questionIndex, 'options', undefined);
-                          updateQuestion(questionIndex, 'correctAnswer', 'true');
-                        } else {
-                          updateQuestion(questionIndex, 'options', ['', '', '', '']);
-                          updateQuestion(questionIndex, 'correctAnswer', 0);
-                        }
+                        const newType = e.target.value as 'multiple-choice' | 'true-false';
+                        updateQuestion(questionIndex, 'type', newType);
                       }}
                       className="mt-1 block w-48 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                     >
@@ -227,31 +319,26 @@ export default function QuizCreator() {
                   )}
 
                   {question.type === 'true-false' && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Correct Answer</label>
-                      <div className="flex space-x-4">
-                        <label className="flex items-center">
-                          <input
-                            type="radio"
-                            name={`tf-${questionIndex}`}
-                            value="true"
-                            checked={question.correctAnswer === 'true'}
-                            onChange={(e) => updateQuestion(questionIndex, 'correctAnswer', e.target.value)}
-                            className="text-indigo-600"
-                          />
-                          <span className="ml-2">True</span>
-                        </label>
-                        <label className="flex items-center">
-                          <input
-                            type="radio"
-                            name={`tf-${questionIndex}`}
-                            value="false"
-                            checked={question.correctAnswer === 'false'}
-                            onChange={(e) => updateQuestion(questionIndex, 'correctAnswer', e.target.value)}
-                            className="text-indigo-600"
-                          />
-                          <span className="ml-2">False</span>
-                        </label>
+                    <div className="mt-4 space-y-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Select the correct answer
+                      </label>
+                      <div className="flex items-center space-x-4">
+                        {['True', 'False'].map((option, idx) => (
+                          <label key={option} className="inline-flex items-center">
+                            <input
+                              type="radio"
+                              className="form-radio text-indigo-600"
+                              name={`tf-${question.id}`}
+                              value={option.toLowerCase()}
+                              checked={String(question.correctAnswer).toLowerCase() === option.toLowerCase()}
+                              onChange={() => {
+                                updateQuestion(questionIndex, 'correctAnswer', option.toLowerCase());
+                              }}
+                            />
+                            <span className="ml-2">{option}</span>
+                          </label>
+                        ))}
                       </div>
                     </div>
                   )}
@@ -264,16 +351,32 @@ export default function QuizCreator() {
             <button
               type="button"
               onClick={() => router.push('/admin/dashboard')}
-              className="px-6 py-3 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+              disabled={loading}
+              className="inline-flex items-center px-6 py-3 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium disabled:opacity-50"
+              className="inline-flex items-center px-6 py-3 border border-transparent rounded-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-75 disabled:cursor-not-allowed transition-colors"
             >
-              {loading ? 'Creating...' : 'Create Quiz'}
+              {loading ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Create Quiz
+                </>
+              )}
             </button>
           </div>
         </form>
