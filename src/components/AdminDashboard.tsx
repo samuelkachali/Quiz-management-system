@@ -76,25 +76,41 @@ export default function AdminDashboard() {
   };
 
   const deleteQuiz = async (quizId: string) => {
-    if (!confirm('Are you sure you want to delete this quiz?')) return;
+    if (!confirm('Are you sure you want to delete this quiz? This action cannot be undone.')) return;
     
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Authentication required. Please log in again.');
+        router.push('/admin/login');
+        return;
+      }
+
       const response = await fetch(`/api/quizzes/${quizId}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
       });
 
       const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to delete quiz');
+      }
+
       if (data.success) {
-        setQuizzes(quizzes.filter(quiz => quiz.id !== quizId));
+        // Update the UI by removing the deleted quiz
+        setQuizzes(prevQuizzes => prevQuizzes.filter(quiz => quiz.id !== quizId));
+        // Show a success message
         alert('Quiz deleted successfully');
       } else {
-        alert('Failed to delete quiz: ' + data.message);
+        throw new Error(data.message || 'Failed to delete quiz');
       }
     } catch (error) {
       console.error('Error deleting quiz:', error);
-      alert('Error deleting quiz');
+      alert(`Error: ${error instanceof Error ? error.message : 'Failed to delete quiz'}`);
     }
   };
 
