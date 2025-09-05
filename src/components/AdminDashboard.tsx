@@ -99,11 +99,16 @@ export default function AdminDashboard() {
   };
 
   const getQuizStats = (quizId: string) => {
-    const quizAttempts = attempts.filter(attempt => attempt.quizId === quizId);
+    // Handle both quizId and quiz_id properties
+    const quizAttempts = attempts.filter(attempt => {
+      const attemptQuizId = attempt.quizId || (attempt as any).quiz_id;
+      return String(attemptQuizId) === String(quizId);
+    });
+    
     const totalAttempts = quizAttempts.length;
-    const passedAttempts = quizAttempts.filter(attempt => attempt.score >= 50).length;
+    const passedAttempts = quizAttempts.filter(attempt => Number(attempt.score) >= 50).length;
     const averageScore = totalAttempts > 0 
-      ? Math.round(quizAttempts.reduce((sum, attempt) => sum + attempt.score, 0) / totalAttempts)
+      ? Math.round(quizAttempts.reduce((sum, attempt) => sum + (Number(attempt.score) || 0), 0) / totalAttempts)
       : 0;
     
     return { totalAttempts, passedAttempts, averageScore };
@@ -483,38 +488,35 @@ export default function AdminDashboard() {
                 <h3 className="text-lg font-medium text-gray-800 mb-4">Quiz Performance Overview</h3>
                 <div className="space-y-4">
                   {quizzes.map((quiz) => {
-                    const quizAttempts = attempts.filter(attempt => (attempt.quizId || attempt.quizId) === quiz.id);
                     const stats = getQuizStats(quiz.id);
+                    const passRate = stats.totalAttempts > 0 
+                      ? Math.round((stats.passedAttempts / stats.totalAttempts) * 100)
+                      : 0;
+                    
                     return (
-                      <div key={quiz.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors duration-200">
-                        <div className="flex justify-between items-start mb-3">
+                      <div key={quiz.id} className="p-4 bg-gray-50 rounded-lg">
+                        <div className="flex justify-between items-center mb-2">
+                          <h4 className="font-medium text-gray-900">{quiz.title}</h4>
+                          <span className="text-sm text-gray-500">
+                            {stats.totalAttempts} attempt{stats.totalAttempts !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-4 text-center">
                           <div>
-                            <h4 className="font-medium text-gray-800">{quiz.title}</h4>
-                            <p className="text-sm text-gray-600">{quiz.description}</p>
+                            <p className="text-sm text-gray-500">Avg. Score</p>
+                            <p className="text-lg font-semibold">{stats.averageScore}%</p>
                           </div>
-                          <div className="text-right">
+                          <div>
                             <p className="text-sm text-gray-500">Pass Rate</p>
-                            <p className="text-lg font-bold text-blue-600">
-                              {stats.totalAttempts > 0 ? Math.round((stats.passedAttempts / stats.totalAttempts) * 100) : 0}%
+                            <p className="text-lg font-semibold">
+                              {passRate}%
                             </p>
                           </div>
-                        </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                           <div>
-                            <p className="text-gray-500">Total Attempts</p>
-                            <p className="font-semibold text-gray-800">{stats.totalAttempts}</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-500">Passed</p>
-                            <p className="font-semibold text-green-600">{stats.passedAttempts}</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-500">Failed</p>
-                            <p className="font-semibold text-red-600">{stats.totalAttempts - stats.passedAttempts}</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-500">Avg Score</p>
-                            <p className="font-semibold text-gray-800">{stats.averageScore}%</p>
+                            <p className="text-sm text-gray-500">Passed</p>
+                            <p className="text-lg font-semibold">
+                              {stats.passedAttempts} / {stats.totalAttempts}
+                            </p>
                           </div>
                         </div>
                       </div>
