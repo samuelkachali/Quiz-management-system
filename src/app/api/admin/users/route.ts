@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '../../../../lib/supabase';
-import { verifyToken } from '../../../../../backend/utils/auth';
-import { sendEmail, generateAdminApprovalEmail } from '../../../../lib/email';
+import { supabase } from '@/lib/supabase';
+import { verifyToken } from '@/backend/utils/auth';
+import { sendEmail, generateAdminApprovalEmail } from '@/lib/email';
 
 
 export async function GET(request: NextRequest) {
@@ -45,7 +45,11 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Users API error:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { 
+        success: false, 
+        message: 'Failed to fetch users',
+        error: process.env.NODE_ENV === 'development' ? error : undefined
+      },
       { status: 500 }
     );
   }

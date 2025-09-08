@@ -11,11 +11,22 @@ type Question = {
   correctAnswer: number | string;
 };
 
-export default function QuizCreator() {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [passingScore, setPassingScore] = useState(60);
-  const [questions, setQuestions] = useState<Question[]>([]);
+type QuizCreatorProps = {
+  initialQuiz?: {
+    id?: string;
+    title?: string;
+    description?: string;
+    questions: Question[];
+    passingScore: number;
+  };
+  isEditing?: boolean;
+};
+
+export default function QuizCreator({ initialQuiz, isEditing = false }: QuizCreatorProps) {
+  const [title, setTitle] = useState(initialQuiz?.title || '');
+  const [description, setDescription] = useState(initialQuiz?.description || '');
+  const [passingScore, setPassingScore] = useState(initialQuiz?.passingScore || 60);
+  const [questions, setQuestions] = useState<Question[]>(initialQuiz?.questions || []);
   const [loading, setLoading] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   
@@ -126,8 +137,14 @@ export default function QuizCreator() {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/quizzes', {
-        method: 'POST',
+      const url = isEditing && initialQuiz?.id 
+        ? `/api/quizzes/${initialQuiz.id}` 
+        : '/api/quizzes';
+      
+      const method = isEditing && initialQuiz?.id ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
@@ -143,8 +160,9 @@ export default function QuizCreator() {
       const data = await response.json();
       if (data.success) {
         router.push('/admin/dashboard');
+        router.refresh();
       } else {
-        alert(data.message || 'Failed to create quiz');
+        alert(data.message || `Failed to ${isEditing ? 'update' : 'create'} quiz`);
       }
     } catch (error) {
       alert('An error occurred. Please try again.');
@@ -190,7 +208,9 @@ export default function QuizCreator() {
       <div className="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Quiz Details</h2>
+            <h2 className="text-lg font-medium text-gray-900 mb-4">
+              {isEditing ? 'Edit Quiz' : 'Create New Quiz'}
+            </h2>
             
             <div className="grid grid-cols-1 gap-4">
               <div>
@@ -367,14 +387,14 @@ export default function QuizCreator() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Creating...
+                  {isEditing ? 'Updating...' : 'Creating...'}
                 </>
               ) : (
                 <>
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  Create Quiz
+                  {isEditing ? 'Update Quiz' : 'Create Quiz'}
                 </>
               )}
             </button>

@@ -13,6 +13,8 @@ export interface Question {
   type: 'multiple-choice' | 'true-false';
   options?: string[];
   correctAnswer: string | number;
+  explanation?: string;
+  points?: number;
 }
 
 export interface Quiz {
@@ -24,6 +26,7 @@ export interface Quiz {
   createdBy: string;
   createdAt: Date;
   updatedAt?: Date;
+  is_published?: boolean; // Added to match the API response
 }
 
 export interface QuizAttempt {

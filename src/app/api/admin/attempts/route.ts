@@ -1,6 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '../../../../lib/supabase';
-import { verifyToken } from '../../../../../backend/utils/auth';
+import { supabase } from '@/lib/supabase';
+import { verifyToken } from '@/backend/utils/auth';
+
+interface User {
+  id: string;
+  email?: string;
+  name?: string;
+}
+
+interface Quiz {
+  id: string;
+  title?: string;
+}
+
+interface QuizAttempt {
+  id: string;
+  quiz_id: string;
+  student_id: string;
+  answers: Record<string, any>;
+  score: number;
+  passed: boolean;
+  completed_at: string;
+  user?: User;
+  quiz?: Quiz;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,21 +44,101 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    console.log('Fetching quiz attempts from Supabase...');
+    
+    // First, get the attempts with basic data
     const { data: attempts, error } = await supabase
       .from('quiz_attempts')
       .select('*');
-
+    
     if (error) {
+      console.error('Error fetching quiz attempts:', error);
       return NextResponse.json(
-        { success: false, message: 'Failed to fetch quiz attempts' },
+        { 
+          success: false, 
+          message: 'Failed to fetch quiz attempts',
+          error: process.env.NODE_ENV === 'development' ? error : undefined
+        },
         { status: 500 }
       );
     }
-
-    return NextResponse.json({ success: true, attempts });
+    
+    if (!attempts || attempts.length === 0) {
+      return NextResponse.json({ success: true, attempts: [] });
+    }
+    
+    try {
+      // Get unique user and quiz IDs
+      const userIds = Array.from(new Set(attempts.map(a => a.student_id).filter(Boolean) as string[]));
+      const quizIds = Array.from(new Set(attempts.map(a => a.quiz_id).filter(Boolean) as string[]));
+      
+      // Fetch related users and quizzes
+      const [
+        { data: users, error: usersError },
+        { data: quizzes, error: quizzesError }
+      ] = await Promise.all([
+        userIds.length > 0 
+          ? supabase
+              .from('users')
+              .select('id, email, name')
+              .in('id', userIds)
+          : { data: null, error: null },
+        quizIds.length > 0
+          ? supabase
+              .from('quizzes')
+              .select('id, title')
+              .in('id', quizIds)
+          : { data: null, error: null }
+      ]);
+      
+      if (usersError || quizzesError) {
+        console.error('Error fetching related data:', { usersError, quizzesError });
+        return NextResponse.json(
+          { success: false, message: 'Failed to fetch related data' },
+          { status: 500 }
+        );
+      }
+      
+      // Create maps for quick lookup
+      const userMap = new Map<string, User>();
+      const quizMap = new Map<string, Quiz>();
+      
+      users?.forEach(user => user && user.id && userMap.set(user.id, user));
+      quizzes?.forEach(quiz => quiz && quiz.id && quizMap.set(quiz.id, quiz));
+      
+      // Combine the data with proper typing
+      const attemptsWithRelations: QuizAttempt[] = attempts.map(attempt => ({
+        ...attempt,
+        user: userMap.get(attempt.student_id) || { id: attempt.student_id },
+        quiz: quizMap.get(attempt.quiz_id) || { id: attempt.quiz_id }
+      }));
+      
+      return NextResponse.json({ 
+        success: true, 
+        attempts: attemptsWithRelations 
+      });
+      
+    } catch (error: any) {
+      console.error('Error processing quiz attempts:', error);
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: 'Error processing quiz attempts',
+          error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        },
+        { status: 500 }
+      );
+    }
   } catch (error) {
+    console.error('Unexpected error in GET /api/admin/attempts:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { 
+        success: false, 
+        message: 'Internal server error',
+        error: process.env.NODE_ENV === 'development' 
+          ? error instanceof Error ? error.message : String(error)
+          : undefined
+      },
       { status: 500 }
     );
   }

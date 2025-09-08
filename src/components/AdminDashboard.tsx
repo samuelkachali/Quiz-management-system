@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Quiz, User, QuizAttempt } from '@/types';
+import DocumentUploader from './DocumentUploader';
 
 export default function AdminDashboard() {
   const [user, setUser] = useState<User | null>(null);
@@ -11,6 +12,9 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState<User[]>([]);
   const [activeSection, setActiveSection] = useState('dashboard');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [importedQuiz, setImportedQuiz] = useState<{ id: string; title?: string; description?: string; questions: any[] } | null>(null);
+  const [activeTab, setActiveTab] = useState('quizzes'); // 'quizzes' or 'create'
   const router = useRouter();
 
   useEffect(() => {
@@ -32,38 +36,132 @@ export default function AdminDashboard() {
     fetchData(token);
   }, [router]);
 
+  const refreshQuizzes = async (quizId?: string) => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      const response = await fetch('/api/quizzes', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (data.success) {
+        setQuizzes(data.quizzes);
+        if (quizId) {
+          const quiz = data.quizzes.find((q: Quiz) => q.id === quizId);
+          if (quiz) {
+            setImportedQuiz({
+              id: quiz.id,
+              questions: quiz.questions || [],
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error refreshing quizzes:', error);
+    }
+  };
+
   const fetchData = async (token: string) => {
     try {
-      // Fetch users data
-      const usersResponse = await fetch('/api/admin/users', {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-
-      const usersData = await usersResponse.json();
-      if (usersData.success) setUsers(usersData.users);
+      setLoading(true);
+      setError('');
       
-      // Fetch quizzes data
-      const quizzesResponse = await fetch('/api/quizzes', {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
+      // Create fetch options with authorization header
+      const fetchOptions = {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      };
 
-      const quizzesData = await quizzesResponse.json();
-      if (quizzesData.success) setQuizzes(quizzesData.quizzes);
-      
-      // Fetch attempts data
-      const attemptsResponse = await fetch('/api/admin/attempts', {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
+      // Fetch all data in parallel
+      const [usersRes, quizzesRes, attemptsRes] = await Promise.all([
+        fetch('/api/admin/users', fetchOptions).catch(err => {
+          console.error('Failed to fetch users:', err);
+          return { 
+            ok: false, 
+            status: 500, 
+            statusText: 'Network error',
+            json: async () => ({
+              success: false,
+              message: 'Failed to fetch users',
+              error: err.message
+            })
+          };
+        }),
+        fetch('/api/quizzes', fetchOptions).catch(err => {
+          console.error('Failed to fetch quizzes:', err);
+          return { 
+            ok: false, 
+            status: 500, 
+            statusText: 'Network error',
+            json: async () => ({
+              success: false,
+              message: 'Failed to fetch quizzes',
+              error: err.message
+            })
+          };
+        }),
+        fetch('/api/admin/attempts', fetchOptions).catch(err => {
+          console.error('Failed to fetch attempts:', err);
+          return { 
+            ok: false, 
+            status: 500, 
+            statusText: 'Network error',
+            json: async () => ({
+              success: false,
+              message: 'Failed to fetch attempts',
+              error: err.message
+            })
+          };
+        })
+      ]);
 
-      const attemptsData = await attemptsResponse.json();
-      if (attemptsData.success) setAttempts(attemptsData.attempts);
-      
+      // Process users response
+      if (usersRes.ok) {
+        const usersData = await usersRes.json();
+        if (usersData?.success) {
+          setUsers(usersData.users || []);
+        } else {
+          console.error('Failed to fetch users:', usersData?.message);
+          setError(`Failed to load users: ${usersData?.message || 'Unknown error'}`);
+        }
+      } else {
+        console.error('Users API error:', usersRes.status, usersRes.statusText);
+        setError(`Failed to load users: ${usersRes.status} ${usersRes.statusText}`);
+      }
+
+      // Process quizzes response
+      if (quizzesRes.ok) {
+        const quizzesData = await quizzesRes.json();
+        if (quizzesData?.success) {
+          setQuizzes(quizzesData.quizzes || []);
+        } else {
+          console.error('Failed to fetch quizzes:', quizzesData?.message);
+          setError(`Failed to load quizzes: ${quizzesData?.message || 'Unknown error'}`);
+        }
+      } else {
+        console.error('Quizzes API error:', quizzesRes.status, quizzesRes.statusText);
+        setError(`Failed to load quizzes: ${quizzesRes.status} ${quizzesRes.statusText}`);
+      }
+
+      // Process attempts response
+      if (attemptsRes.ok) {
+        const attemptsData = await attemptsRes.json();
+        if (attemptsData?.success) {
+          setAttempts(attemptsData.attempts || []);
+        } else {
+          console.error('Failed to fetch attempts:', attemptsData?.message);
+          setError(`Failed to load attempts: ${attemptsData?.message || 'Unknown error'}`);
+        }
+      } else {
+        console.error('Attempts API error:', attemptsRes.status, attemptsRes.statusText);
+        setError(`Failed to load attempts: ${attemptsRes.status} ${attemptsRes.statusText}`);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
-      // Don't redirect on error, just set empty data
-      setUsers([]);
-      setQuizzes([]);
-      setAttempts([]);
+      setError('An unexpected error occurred while loading data');
     } finally {
       setLoading(false);
     }
@@ -188,6 +286,35 @@ export default function AdminDashboard() {
 
   const pendingAdmins = users.filter(u => u.role === 'admin' && u.status === 'pending');
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-3"></div>
+          <div className="text-gray-600">Loading dashboard...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white p-6 rounded-lg shadow-md max-w-md w-full text-center">
+          <div className="text-red-500 text-5xl mb-4">⚠️</div>
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">Error Loading Dashboard</h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const renderSidebar = () => (
     <div className="w-72 bg-white border-r border-gray-200 shadow-sm h-full flex flex-col">
       {/* Header */}
@@ -296,23 +423,12 @@ export default function AdminDashboard() {
     </div>
   );
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="flex flex-col items-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-3"></div>
-          <div className="text-gray-600">Loading dashboard...</div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {renderSidebar()}
       
       <div className="flex-1 flex flex-col">
-      <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+        <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
           <div className="px-6">
             <div className="flex justify-between h-16">
               <div className="flex items-center">
@@ -339,6 +455,110 @@ export default function AdminDashboard() {
         </nav>
 
         <div className="flex-1 p-6 overflow-auto">
+          {activeSection === 'quizzes' && (
+            <div className="mb-6">
+              <div className="border-b border-gray-200">
+                <nav className="-mb-px flex space-x-8">
+                  <button
+                    onClick={() => setActiveTab('quizzes')}
+                    className={`${activeTab === 'quizzes' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                  >
+                    All Quizzes
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('create')}
+                    className={`${activeTab === 'create' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                  >
+                    Create/Import Quiz
+                  </button>
+                </nav>
+              </div>
+
+              {activeTab === 'create' ? (
+                <div className="mt-6 bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                  <h3 className="text-lg font-medium text-gray-800 mb-4">Import Quiz from Document</h3>
+                  <DocumentUploader 
+                    onUploadSuccess={(quizId) => {
+                      // If you need to set the imported quiz, you'll need to fetch it first
+                      // For now, just refresh the quizzes list with the new quiz ID
+                      refreshQuizzes(quizId);
+                      setActiveTab('quizzes');
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="mt-6">
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-xl font-semibold text-gray-800">Quiz Management</h2>
+                    <button
+                      onClick={() => router.push('/admin/create-quiz')}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200"
+                    >
+                      Create New Quiz
+                    </button>
+                  </div>
+                  {quizzes.length === 0 ? (
+                    <div className="text-center py-12 bg-white rounded-lg border border-gray-200 shadow-sm">
+                      <div className="text-gray-500 mb-1">No quizzes created yet</div>
+                      <button
+                        onClick={() => router.push('/admin/create-quiz')}
+                        className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200"
+                      >
+                        Create Your First Quiz
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+                      {quizzes.map((quiz) => {
+                        const stats = getQuizStats(quiz.id);
+                        return (
+                          <div key={quiz.id} className="bg-white overflow-hidden rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
+                            <div className="p-5">
+                              <h3 className="text-lg font-medium text-gray-800 mb-2">{quiz.title}</h3>
+                              <p className="text-gray-600 text-sm mb-4 line-clamp-2">{quiz.description}</p>
+                              <div className="grid grid-cols-2 gap-3 text-sm text-gray-600 mb-4">
+                                <div className="flex items-center">
+                                  <span className="mr-1">📋</span>
+                                  <span>{quiz.questions.length} questions</span>
+                                </div>
+                                <div className="flex items-center">
+                                  <span className="mr-1">🎯</span>
+                                  <span>Pass: {quiz.passingScore}%</span>
+                                </div>
+                                <div className="flex items-center">
+                                  <span className="mr-1">📊</span>
+                                  <span>{stats.totalAttempts} attempts</span>
+                                </div>
+                                <div className="flex items-center">
+                                  <span className="mr-1">📈</span>
+                                  <span>Avg: {stats.averageScore}%</span>
+                                </div>
+                              </div>
+                              <div className="flex space-x-2">
+                                <button
+                                  onClick={() => router.push(`/admin/quizzes/edit?id=${quiz.id}`)}
+                                  className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 border border-blue-200"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => deleteQuiz(quiz.id)}
+                                  className="flex-1 bg-red-50 hover:bg-red-100 text-red-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 border border-red-200"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {activeSection === 'dashboard' && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -385,7 +605,7 @@ export default function AdminDashboard() {
                     <div className="ml-4">
                       <h3 className="text-sm font-medium text-gray-600">Avg Score</h3>
                       <p className="text-2xl font-bold text-gray-800">
-                        {50}%
+                        {attempts.length > 0 ? Math.round(attempts.reduce((sum, a) => sum + a.score, 0) / attempts.length) : 0}%
                       </p>
                     </div>
                   </div>
@@ -423,78 +643,6 @@ export default function AdminDashboard() {
                   })}
                 </div>
               </div>
-            </div>
-          )}
-
-          {activeSection === 'quizzes' && (
-            <div>
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-gray-800">Quiz Management</h2>
-                <button
-                  onClick={() => router.push('/admin/create-quiz')}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200"
-                >
-                  Create New Quiz
-                </button>
-              </div>
-
-              {quizzes.length === 0 ? (
-                <div className="text-center py-12 bg-white rounded-lg border border-gray-200 shadow-sm">
-                  <div className="text-gray-500 mb-1">No quizzes created yet</div>
-                  <button
-                    onClick={() => router.push('/admin/create-quiz')}
-                    className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200"
-                  >
-                    Create Your First Quiz
-                  </button>
-                </div>
-              ) : (
-                <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-                  {quizzes.map((quiz) => {
-                    const stats = getQuizStats(quiz.id);
-                    return (
-                      <div key={quiz.id} className="bg-white overflow-hidden rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
-                        <div className="p-5">
-                          <h3 className="text-lg font-medium text-gray-800 mb-2">{quiz.title}</h3>
-                          <p className="text-gray-600 text-sm mb-4 line-clamp-2">{quiz.description}</p>
-                          <div className="grid grid-cols-2 gap-3 text-sm text-gray-600 mb-4">
-                            <div className="flex items-center">
-                              <span className="mr-1">📋</span>
-                              <span>{quiz.questions.length} questions</span>
-                            </div>
-                            <div className="flex items-center">
-                              <span className="mr-1">🎯</span>
-                              <span>Pass: {quiz.passingScore}%</span>
-                            </div>
-                            <div className="flex items-center">
-                              <span className="mr-1">📊</span>
-                              <span>{stats.totalAttempts} attempts</span>
-                            </div>
-                            <div className="flex items-center">
-                              <span className="mr-1">📈</span>
-                              <span>Avg: {stats.averageScore}%</span>
-                            </div>
-                          </div>
-                          <div className="flex space-x-2">
-                            <button
-                              onClick={() => router.push(`/admin/quiz/${quiz.id}/edit`)}
-                              className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 border border-blue-200"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => deleteQuiz(quiz.id)}
-                              className="flex-1 bg-red-50 hover:bg-red-100 text-red-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 border border-red-200"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
             </div>
           )}
 
@@ -646,7 +794,7 @@ export default function AdminDashboard() {
                     </div>
                     <div className="flex justify-between py-2">
                       <span className="text-gray-600">Unique Students:</span>
-                      <span className="font-semibold text-gray-800">{new Set(attempts.map(a => a.studentId)).size}</span>
+                      <span className="font-semibold text-gray-800">{new Set(attempts.map(a => a.studentId || (a as any).student_id)).size}</span>
                     </div>
                   </div>
                 </div>
@@ -779,7 +927,7 @@ export default function AdminDashboard() {
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                               <button
                                 onClick={() => handlePasswordReset(tableUser.id, tableUser.email)}
-                                className="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg text-xs transition-colors duration-200 border border-blue-200"
+                                className="text-blue-600 hover:text-blue-900 mr-3"
                               >
                                 Reset Password
                               </button>

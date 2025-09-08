@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { verifyToken } from '../../../../backend/utils/auth';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://qbxusidgwovqqnghmvox.supabase.co';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFieHVzaWRnd292cXFuZ2htdm94Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjgzNzc4NywiZXhwIjoyMDcyNDEzNzg3fQ.7FZ1U66vfHGLrSOT6EpMim6k0o3Yw6PRpbxwJB8xTxU';
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+import { supabase } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,19 +21,38 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get quizzes from Supabase
+    console.log('Fetching quizzes from Supabase...');
+    
+    console.log('Executing Supabase query...');
     const { data: quizzes, error } = await supabase
       .from('quizzes')
       .select('*')
       .order('created_at', { ascending: false });
 
+    console.log('Supabase query completed');
+
     if (error) {
-      console.error('Error fetching quizzes:', error);
+      console.error('Supabase error details:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint
+      });
+      
       return NextResponse.json(
-        { success: false, message: 'Failed to fetch quizzes' },
+        { 
+          success: false, 
+          message: 'Failed to fetch quizzes',
+          error: process.env.NODE_ENV === 'development' ? {
+            message: error.message,
+            code: error.code
+          } : 'Failed to fetch quizzes'
+        },
         { status: 500 }
       );
     }
+    
+    console.log(`Successfully fetched ${quizzes?.length || 0} quizzes`);
 
     return NextResponse.json({ success: true, quizzes: quizzes || [] });
   } catch (error) {
