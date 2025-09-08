@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Quiz, Question } from '@/types';
 
-export default function EditQuizPage() {
+// Move the main component logic to a separate component
+function EditQuizContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const quizId = searchParams.get('id');
@@ -452,5 +453,17 @@ export default function EditQuizPage() {
         </div>
       </form>
     </div>
+  );
+}
+
+export default function EditQuizPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    }>
+      <EditQuizContent />
+    </Suspense>
   );
 }

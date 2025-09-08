@@ -1,10 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import QuizCreator from '@/components/QuizCreator';
+import { Quiz as QuizType, Question } from '@/types';
 
-type Quiz = {
+type QuizFormData = {
+  title: string;
+  description: string;
+  passingScore: number;
+};
+
+type QuizEditorType = {
   id: string;
   title: string;
   description: string;
@@ -18,15 +25,15 @@ type Quiz = {
   passingScore: number;
 };
 
-export default function EditQuizPage() {
+const EditQuizContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [quiz, setQuiz] = useState<Quiz | null>(null);
+  const [quiz, setQuiz] = useState<QuizEditorType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
   // Transform API response to match QuizCreator's expected format
-  const transformQuizData = (apiQuiz: any): Quiz | null => {
+  const transformQuizData = (apiQuiz: any): QuizEditorType | null => {
     if (!apiQuiz) return null;
     
     return {
@@ -150,8 +157,29 @@ export default function EditQuizPage() {
         </button>
       </div>
       <div className="bg-white shadow rounded-lg p-6">
-        <QuizCreator initialQuiz={quiz} isEditing={true} />
+        <QuizCreator 
+          initialQuiz={{
+            id: quiz.id,
+            title: quiz.title,
+            description: quiz.description,
+            questions: quiz.questions,
+            passingScore: quiz.passingScore
+          }} 
+          isEditing={true} 
+        />
       </div>
     </div>
+  );
+}
+
+export default function EditQuizPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    }>
+      <EditQuizContent />
+    </Suspense>
   );
 }
