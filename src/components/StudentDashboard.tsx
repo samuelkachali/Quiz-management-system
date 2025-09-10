@@ -3,13 +3,14 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Quiz, User, QuizAttempt } from '@/types';
+import StudyGroupManager from './StudyGroupManager';
 
 export default function StudentDashboard() {
   const [user, setUser] = useState<User | null>(null);
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [attempts, setAttempts] = useState<QuizAttempt[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeView, setActiveView] = useState<'home' | 'available' | 'history'>('home');
+  const [activeView, setActiveView] = useState<'home' | 'available' | 'history' | 'chat'>('home');
   const router = useRouter();
   const [oldHistoryPage, setOldHistoryPage] = useState(0);
 
@@ -53,10 +54,10 @@ export default function StudentDashboard() {
         // Transform database format to frontend format
         const transformedQuizzes = (quizzesData.quizzes || []).map((quiz: any) => ({
           ...quiz,
-          passingScore: quiz.passing_score || quiz.passingScore,
-          createdBy: quiz.created_by || quiz.createdBy,
-          createdAt: quiz.created_at || quiz.createdAt,
-          updatedAt: quiz.updated_at || quiz.updatedAt,
+          passing_score: quiz.passing_score,
+          created_by: quiz.created_by,
+          created_at: quiz.created_at,
+          updated_at: quiz.updated_at,
         }));
         
         console.log('Transformed quizzes:', transformedQuizzes);
@@ -102,22 +103,22 @@ export default function StudentDashboard() {
   };
 
   const getQuizAttempt = (quizId: string) => {
-    const quizAttempts = attempts.filter(attempt => (attempt.quizId || (attempt as any).quiz_id) === quizId);
+    const quizAttempts = attempts.filter(attempt => attempt.quiz_id === quizId);
     if (quizAttempts.length === 0) return undefined;
-    
+
     return quizAttempts.sort((a, b) => {
-      const dateA = new Date(a.completedAt || (a as any).completed_at);
-      const dateB = new Date(b.completedAt || (b as any).completed_at);
+      const dateA = new Date(a.completed_at);
+      const dateB = new Date(b.completed_at);
       return dateB.getTime() - dateA.getTime();
     })[0];
   };
 
   const isQuizUpdatedAfterAttempt = (quiz: Quiz, attempt: QuizAttempt | undefined) => {
-    if (!attempt || !quiz.updatedAt) return false;
-    
-    const quizUpdatedAt = new Date(quiz.updatedAt);
-    const attemptCompletedAt = new Date(attempt.completedAt || (attempt as any).completed_at);
-    
+    if (!attempt || !quiz.updated_at) return false;
+
+    const quizUpdatedAt = new Date(quiz.updated_at);
+    const attemptCompletedAt = new Date(attempt.completed_at);
+
     return quizUpdatedAt > attemptCompletedAt;
   };
 
@@ -320,7 +321,7 @@ export default function StudentDashboard() {
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                         </svg>
-                        <span>Pass: {quiz.passingScore}%</span>
+                        <span>Pass: {quiz.passing_score}%</span>
                       </div>
                     </div>
                     
@@ -372,12 +373,12 @@ export default function StudentDashboard() {
   
     // Separate attempts into recent and old
     const recentAttempts = attempts.filter(attempt => {
-      const attemptDate = new Date(attempt.completedAt || (attempt as any).completed_at);
+      const attemptDate = new Date(attempt.completed_at);
       return attemptDate > cutoffDate;
     });
-  
+
     const oldAttempts = attempts.filter(attempt => {
-      const attemptDate = new Date(attempt.completedAt || (attempt as any).completed_at);
+      const attemptDate = new Date(attempt.completed_at);
       return attemptDate <= cutoffDate;
     });
   
@@ -397,9 +398,9 @@ export default function StudentDashboard() {
     };
   
     const renderAttemptCard = (attempt: any) => {
-      const quiz = quizzes.find(q => q.id === (attempt.quizId || (attempt as any).quiz_id));
+      const quiz = quizzes.find(q => q.id === attempt.quiz_id);
       const isPassed = attempt.score >= 50;
-  
+
       return (
         <li key={attempt.id} className="px-6 py-5 hover:bg-gray-50/50 transition-colors duration-200">
           <div className="flex items-center justify-between">
@@ -418,7 +419,7 @@ export default function StudentDashboard() {
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
-                    <span>Completed: {formatDate(attempt.completedAt || (attempt as any).completed_at)}</span>
+                    <span>Completed: {formatDate(attempt.completed_at)}</span>
                   </p>
                 </div>
               </div>
@@ -431,8 +432,8 @@ export default function StudentDashboard() {
                 <div className="text-xs text-gray-500">Score</div>
               </div>
               <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
-                isPassed 
-                  ? 'bg-green-100 text-green-800' 
+                isPassed
+                  ? 'bg-green-100 text-green-800'
                   : 'bg-red-100 text-red-800'
               }`}>
                 {isPassed ? '✓ PASSED' : '✗ FAILED'}
@@ -593,6 +594,12 @@ export default function StudentDashboard() {
                 <span className="text-gray-900 font-semibold ml-1">{user?.name}</span>
               </div>
               <button
+                onClick={() => setActiveView('chat')}
+                className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg"
+              >
+                💬 Study Chat
+              </button>
+              <button
                 onClick={handleLogout}
                 className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg"
               >
@@ -609,6 +616,7 @@ export default function StudentDashboard() {
             {activeView === 'home' && renderHomeView()}
             {activeView === 'available' && renderAvailableQuizzes()}
             {activeView === 'history' && renderQuizHistory()}
+            {activeView === 'chat' && <StudyGroupManager />}
           </div>
         </div>
       </div>

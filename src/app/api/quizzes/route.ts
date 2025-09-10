@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken } from '../../../../backend/utils/auth';
-import { supabase } from '@/lib/supabase';
+import { verifyToken } from '@/backend/utils/auth';
+import { supabase, supabaseAdmin } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,14 +22,18 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('Fetching quizzes from Supabase...');
-    
+    console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+    console.log('JWT_SECRET exists:', !!process.env.JWT_SECRET);
+
     console.log('Executing Supabase query...');
-    const { data: quizzes, error } = await supabase
+    const { data: quizzes, error } = await supabaseAdmin
       .from('quizzes')
       .select('*')
       .order('created_at', { ascending: false });
 
     console.log('Supabase query completed');
+    console.log('Quizzes query result:', { count: quizzes?.length, error: error?.message });
+    console.log('Quizzes data:', quizzes);
 
     if (error) {
       console.error('Supabase error details:', {
@@ -86,25 +90,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { title, description, questions, passingScore } = await request.json();
+    const { title, description, questions, passing_score } = await request.json();
 
-    if (!title || !description || !questions || !passingScore) {
+    if (!title || !description || !questions || passing_score === undefined) {
       return NextResponse.json(
         { success: false, message: 'All fields are required' },
         { status: 400 }
       );
     }
 
-    console.log('Creating quiz:', { title, description, questionsCount: questions.length, passingScore, createdBy: decoded.id });
+    console.log('Creating quiz:', { title, description, questionsCount: questions.length, passing_score, created_by: decoded.id });
 
     // Save quiz to Supabase
-    const { data: newQuiz, error } = await supabase
+    const { data: newQuiz, error } = await supabaseAdmin
       .from('quizzes')
       .insert({
         title,
         description,
         questions,
-        passing_score: passingScore,
+        passing_score,
         created_by: decoded.id,
         created_at: new Date().toISOString()
       })

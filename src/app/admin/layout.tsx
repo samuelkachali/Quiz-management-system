@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import AppLayout from '@/components/AppLayout';
 
 export default function AdminLayout({
   children,
@@ -18,5 +19,10 @@ export default function AdminLayout({
     }
   }, [pathname, router]);
 
-  return <>{children}</>;
+  // Don't use AppLayout for login/signup pages (they handle their own auth)
+  if (pathname === '/admin/login' || pathname === '/admin/signup') {
+    return <>{children}</>;
+  }
+
+  return <AppLayout>{children}</AppLayout>;
 }

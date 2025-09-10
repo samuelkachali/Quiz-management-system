@@ -22,21 +22,21 @@ export interface Quiz {
   title: string;
   description: string;
   questions: Question[];
-  passingScore: number; // percentage (e.g., 60 for 60%)
-  createdBy: string;
-  createdAt: Date;
-  updatedAt?: Date;
+  passing_score: number; // percentage (e.g., 60 for 60%)
+  created_by: string;
+  created_at: string;
+  updated_at?: string;
   is_published?: boolean; // Added to match the API response
 }
 
 export interface QuizAttempt {
   id: string;
-  quizId: string;
-  studentId: string;
+  quiz_id: string;
+  student_id: string;
   answers: { [questionId: string]: string | number };
   score: number;
   passed: boolean;
-  completedAt: Date;
+  completed_at: string;
 }
 
 export interface AuthResponse {

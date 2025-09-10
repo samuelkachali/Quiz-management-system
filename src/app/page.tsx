@@ -1,10 +1,53 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 export default function Home() {
   const [selectedRole, setSelectedRole] = useState<'admin' | 'student' | null>(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get('redirect');
+  
+  // Handle redirects and authentication state
+  useEffect(() => {
+    console.log('Root page mounted with redirect:', redirect);
+    
+    const checkAuthAndRedirect = () => {
+      if (typeof window === 'undefined') return;
+      
+      const token = localStorage.getItem('token');
+      const userData = localStorage.getItem('user');
+      
+      // If we have a valid token and user data
+      if (token && userData) {
+        try {
+          const user = JSON.parse(userData);
+          const targetPath = redirect || (user.role === 'admin' || user.role === 'super_admin' 
+            ? '/admin/dashboard' 
+            : '/student/dashboard');
+          
+          // Only redirect if we're not already on the target path
+          if (window.location.pathname !== targetPath) {
+            console.log(`User is logged in as ${user.role}, redirecting to:`, targetPath);
+            router.replace(targetPath);
+          }
+        } catch (error) {
+          console.error('Error parsing user data:', error);
+          // Clear invalid data
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        }
+      } else if (redirect && redirect !== '/') {
+        // If we have a redirect but no token, go to login with the redirect
+        console.log('No valid session, redirecting to login with return URL:', redirect);
+        router.replace(`/login?redirect=${encodeURIComponent(redirect)}`);
+      }
+    };
+    
+    checkAuthAndRedirect();
+  }, [redirect, router]);
 
   const resetSelection = () => {
     setSelectedRole(null);
@@ -107,7 +150,7 @@ export default function Home() {
             
             <div className="space-y-3">
               <Link
-                href={selectedRole === 'admin' ? '/admin/login' : '/student/login'}
+                href={`${selectedRole === 'admin' ? '/admin/login' : '/student/login'}${redirect ? `?redirect=${encodeURIComponent(redirect)}` : ''}`}
                 className={`block w-full ${selectedRole === 'admin' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-indigo-600 hover:bg-indigo-700'} text-white font-medium py-3 px-4 rounded-lg transition-colors`}
               >
                 {selectedRole === 'admin' ? 'Admin Login' : 'Student Login'}

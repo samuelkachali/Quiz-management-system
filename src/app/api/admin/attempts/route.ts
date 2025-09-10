@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabase, supabaseAdmin } from '@/lib/supabase';
 import { verifyToken } from '@/backend/utils/auth';
+
+// Enable debug logging for Supabase
+console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+console.log('Supabase Admin Key exists:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 interface User {
   id: string;
@@ -45,19 +49,37 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('Fetching quiz attempts from Supabase...');
-    
-    // First, get the attempts with basic data
-    const { data: attempts, error } = await supabase
+    console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+    console.log('JWT_SECRET exists:', !!process.env.JWT_SECRET);
+
+    // First, get the attempts with basic data using admin client
+    console.log('Fetching quiz attempts from Supabase...');
+    const { data: attempts, error } = await supabaseAdmin
       .from('quiz_attempts')
-      .select('*');
+      .select('*')
+      .order('completed_at', { ascending: false });
+
+    console.log('Attempts query result:', { count: attempts?.length, error: error?.message });
+    console.log('Attempts data:', attempts);
     
     if (error) {
       console.error('Error fetching quiz attempts:', error);
+      console.error('Supabase error details:', {
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        message: error.message
+      });
+      
       return NextResponse.json(
         { 
           success: false, 
           message: 'Failed to fetch quiz attempts',
-          error: process.env.NODE_ENV === 'development' ? error : undefined
+          error: process.env.NODE_ENV === 'development' ? {
+            message: error.message,
+            code: error.code,
+            details: error.details
+          } : undefined
         },
         { status: 500 }
       );
@@ -77,14 +99,14 @@ export async function GET(request: NextRequest) {
         { data: users, error: usersError },
         { data: quizzes, error: quizzesError }
       ] = await Promise.all([
-        userIds.length > 0 
-          ? supabase
+        userIds.length > 0
+          ? supabaseAdmin
               .from('users')
               .select('id, email, name')
               .in('id', userIds)
           : { data: null, error: null },
         quizIds.length > 0
-          ? supabase
+          ? supabaseAdmin
               .from('quizzes')
               .select('id, title')
               .in('id', quizIds)

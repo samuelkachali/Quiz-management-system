@@ -1,17 +1,21 @@
 const { createClient } = require('@supabase/supabase-js');
 const fs = require('fs');
 
-// Manually read .env.local file
-const envContent = fs.readFileSync('.env.local', 'utf8');
-const envVars = {};
-envContent.split('\n').forEach(line => {
-  const equalIndex = line.indexOf('=');
-  if (equalIndex > 0) {
-    const key = line.substring(0, equalIndex).trim();
-    const value = line.substring(equalIndex + 1).trim();
-    envVars[key] = value;
-  }
-});
+// Read .env file instead of .env.local
+let envVars = {};
+try {
+  const envContent = fs.readFileSync('.env', 'utf8');
+  envContent.split('\n').forEach(line => {
+    const equalIndex = line.indexOf('=');
+    if (equalIndex > 0) {
+      const key = line.substring(0, equalIndex).trim();
+      const value = line.substring(equalIndex + 1).trim();
+      envVars[key] = value;
+    }
+  });
+} catch (error) {
+  console.log('Could not read .env file, using hardcoded values');
+}
 
 const supabaseUrl = 'https://qbxusidgwovqqnghmvox.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFieHVzaWRnd292cXFuZ2htdm94Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4Mzc3ODcsImV4cCI6MjA3MjQxMzc4N30.s9TZMy5dx-NrHLo1GNsEBZnFzdMRqexcR1japlYXvWU';

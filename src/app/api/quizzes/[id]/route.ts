@@ -170,7 +170,7 @@ export async function DELETE(
     console.log('Attempting to delete quiz with ID:', params.id);
     
     // First check if the quiz exists
-    const { data: existingQuiz, error: fetchError } = await supabase
+    const { data: existingQuiz, error: fetchError } = await supabaseAdmin
       .from('quizzes')
       .select('id')
       .eq('id', params.id)
@@ -185,7 +185,7 @@ export async function DELETE(
     }
 
     // Delete related attempts first if needed
-    const { error: deleteAttemptsError } = await supabase
+    const { error: deleteAttemptsError } = await supabaseAdmin
       .from('quiz_attempts')
       .delete()
       .eq('quiz_id', params.id);
@@ -196,7 +196,7 @@ export async function DELETE(
     }
 
     // Now delete the quiz
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('quizzes')
       .delete()
       .eq('id', params.id);
@@ -310,7 +310,7 @@ export async function PUT(
     }
 
     // Check if quiz exists
-    const { data: existingQuiz, error: fetchError } = await supabase
+    const { data: existingQuiz, error: fetchError } = await supabaseAdmin
       .from('quizzes')
       .select('id')
       .eq('id', params.id)

@@ -14,10 +14,10 @@ function EditQuizContent() {
     id: '',
     title: '',
     description: '',
-    passingScore: 60,
+    passing_score: 60,
     questions: [],
-    createdBy: '',
-    createdAt: new Date(),
+    created_by: '',
+    created_at: new Date().toISOString(),
     is_published: false
   });
   const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null);
@@ -300,19 +300,19 @@ function EditQuizContent() {
               </div>
 
               <div>
-                <label htmlFor="passingScore" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="passing_score" className="block text-sm font-medium text-gray-700">
                   Passing Score (%)
                 </label>
                 <div className="mt-1">
                   <input
                     type="number"
-                    name="passingScore"
-                    id="passingScore"
+                    name="passing_score"
+                    id="passing_score"
                     min="0"
                     max="100"
                     required
-                    value={quiz.passingScore}
-                    onChange={(e) => setQuiz({...quiz, passingScore: parseInt(e.target.value)})}
+                    value={quiz.passing_score}
+                    onChange={(e) => setQuiz({...quiz, passing_score: parseInt(e.target.value)})}
                     className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
                   />
                 </div>

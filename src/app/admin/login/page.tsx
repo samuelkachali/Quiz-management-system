@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('');
@@ -9,13 +9,17 @@ export default function AdminLogin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get('redirect') || '/admin/dashboard';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Admin login form submitted');
     setLoading(true);
     setError('');
 
     try {
+      console.log('Making API call to /api/auth/login');
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
@@ -24,7 +28,9 @@ export default function AdminLogin() {
         body: JSON.stringify({ email, password }),
       });
 
+      console.log('API response status:', response.status);
       const data = await response.json();
+      console.log('API response data:', data);
 
       if (data.success) {
         if (data.user.role !== 'admin' && data.user.role !== 'super_admin') {
@@ -32,13 +38,18 @@ export default function AdminLogin() {
           return;
         }
 
+        console.log('Login successful, storing data and redirecting');
+        // Store token and user data in localStorage
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
-        router.push('/admin/dashboard');
+
+        // Use client-side navigation for better performance
+        router.push(redirect);
       } else {
         setError(data.message || 'Login failed');
       }
     } catch (error) {
+      console.error('Login error:', error);
       setError('An error occurred. Please try again.');
     } finally {
       setLoading(false);
