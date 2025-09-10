@@ -166,7 +166,18 @@ export default function AdminDashboard() {
         name: error instanceof Error ? error.name : typeof error
       });
 
-      setError(`Error loading dashboard: ${errorMessage}`);
+      if (errorMessage.includes('401') || errorMessage.includes('Invalid token') || errorMessage.includes('Authentication failed')) {
+        setError('Your session has expired. Please log in again.');
+        // Clear invalid tokens
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        // Redirect to login after a short delay
+        setTimeout(() => {
+          router.push('/admin/login');
+        }, 2000);
+      } else {
+        setError(`Error loading dashboard: ${errorMessage}`);
+      }
       setLoading(false);
     }
   };
@@ -341,18 +352,31 @@ export default function AdminDashboard() {
   }
 
   if (error) {
+    const isAuthError = error.includes('session has expired') || error.includes('Authentication failed') || error.includes('Invalid token');
+
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="bg-white p-6 rounded-lg shadow-md max-w-md w-full text-center">
-          <div className="text-red-500 text-5xl mb-4">⚠️</div>
-          <h2 className="text-xl font-semibold text-gray-800 mb-2">Error Loading Dashboard</h2>
+          <div className="text-red-500 text-5xl mb-4">{isAuthError ? '🔐' : '⚠️'}</div>
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">
+            {isAuthError ? 'Session Expired' : 'Error Loading Dashboard'}
+          </h2>
           <p className="text-gray-600 mb-6">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200"
-          >
-            Retry
-          </button>
+          {isAuthError ? (
+            <div className="space-y-3">
+              <p className="text-sm text-gray-500">Redirecting to login...</p>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="bg-blue-600 h-2 rounded-full animate-pulse" style={{width: '100%'}}></div>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200"
+            >
+              Retry
+            </button>
+          )}
         </div>
       </div>
     );

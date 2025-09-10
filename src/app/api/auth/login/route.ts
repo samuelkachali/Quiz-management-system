@@ -5,7 +5,15 @@ import jwt from 'jsonwebtoken';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://qbxusidgwovqqnghmvox.supabase.co';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFieHVzaWRnd292cXFuZ2htdm94Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4Mzc3ODcsImV4cCI6MjA3MjQxMzc4N30.s9TZMy5dx-NrHLo1GNsEBZnFzdMRqexcR1japlYXvWU';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFieHVzaWRnd292cXFuZ2htdm94Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjgzNzc4NywiZXhwIjoyMDcyNDEzNzg3fQ.7FZ1U66vfHGLrSOT6EpMim6k0o3Yw6PRpbxwJB8xTxU';
-const jwtSecret = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
+const jwtSecretRaw = process.env.JWT_SECRET;
+
+if (!jwtSecretRaw) {
+  console.error('❌ JWT_SECRET environment variable is not set!');
+  throw new Error('JWT_SECRET environment variable is required');
+}
+
+// At this point, jwtSecretRaw is guaranteed to be a string
+const jwtSecret: string = jwtSecretRaw;
 
 export async function POST(request: NextRequest) {
   try {

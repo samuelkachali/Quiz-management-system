@@ -2,7 +2,15 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { User } from '../../src/types';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
+const JWT_SECRET_RAW = process.env.JWT_SECRET;
+
+if (!JWT_SECRET_RAW) {
+  console.error('❌ JWT_SECRET environment variable is not set!');
+  throw new Error('JWT_SECRET environment variable is required');
+}
+
+// At this point, JWT_SECRET_RAW is guaranteed to be a string
+const JWT_SECRET: string = JWT_SECRET_RAW;
 
 export const generateToken = (user: User): string => {
   return jwt.sign(
