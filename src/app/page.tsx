@@ -1,10 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 
-export default function Home() {
+function HomeContent() {
   const [selectedRole, setSelectedRole] = useState<'admin' | 'student' | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -119,8 +119,8 @@ export default function Home() {
             {selectedRole === 'admin' ? 'Admin Portal' : 'Student Portal'}
           </h1>
           <p className="text-slate-600 text-sm mb-4">
-            {selectedRole === 'admin' 
-              ? 'Create quizzes and manage student performance' 
+            {selectedRole === 'admin'
+              ? 'Create quizzes and manage student performance'
               : 'Take quizzes and track your learning progress'
             }
           </p>
@@ -147,7 +147,7 @@ export default function Home() {
                 </svg>
               )}
             </div>
-            
+
             <div className="space-y-3">
               <Link
                 href={`${selectedRole === 'admin' ? '/admin/login' : '/student/login'}${redirect ? `?redirect=${encodeURIComponent(redirect)}` : ''}`}
@@ -168,3 +168,27 @@ export default function Home() {
     </div>
   );
 }
+
+function Home() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-6">
+        <div className="max-w-2xl w-full">
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-xl mb-4 shadow-lg">
+              <span className="text-white text-2xl font-bold">Q</span>
+            </div>
+            <h1 className="text-3xl md:text-4xl font-bold text-slate-800 mb-3">
+              Quiz Management System
+            </h1>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mt-4"></div>
+          </div>
+        </div>
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
+  );
+}
+
+export default Home;

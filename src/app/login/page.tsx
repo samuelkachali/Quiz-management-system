@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
@@ -13,22 +13,22 @@ const getSafeRedirect = (path: string | null): string => {
   return path;
 };
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isClient, setIsClient] = useState(false);
   const redirect = searchParams.get('redirect') || '/';
-  
+
   // Check if user is already logged in
   useEffect(() => {
     setIsClient(true);
-    
+
     const checkAuth = async () => {
       if (typeof window === 'undefined') return;
-      
+
       const token = localStorage.getItem('token');
       const safeRedirect = getSafeRedirect(redirect);
-      
+
       if (token) {
         try {
           // Verify the token is valid before redirecting
@@ -45,7 +45,7 @@ export default function LoginPage() {
         }
       }
     };
-    
+
     checkAuth();
   }, [router, redirect]);
 
@@ -69,7 +69,7 @@ export default function LoginPage() {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
             <p className="text-gray-600">Please select your login method</p>
           </div>
-          
+
           <div className="space-y-4">
             <Link
               href={`/admin/login?redirect=${encodeURIComponent(redirect || '/admin/dashboard')}`}
@@ -80,7 +80,7 @@ export default function LoginPage() {
             >
               Admin Login
             </Link>
-            
+
             <Link
               href={`/student/login?redirect=${encodeURIComponent(redirect || '/student/dashboard')}`}
               className="block w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-4 rounded-lg text-center transition-colors"
@@ -90,7 +90,7 @@ export default function LoginPage() {
             >
               Student Login
             </Link>
-            
+
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-300"></div>
@@ -99,7 +99,7 @@ export default function LoginPage() {
                 <span className="px-2 bg-white text-gray-500">Or continue as guest</span>
               </div>
             </div>
-            
+
             <Link
               href={getSafeRedirect(redirect)}
               className="block w-full border border-gray-300 text-gray-700 font-medium py-3 px-4 rounded-lg text-center hover:bg-gray-50 transition-colors"
@@ -115,3 +115,24 @@ export default function LoginPage() {
     </div>
   );
 }
+
+function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-6">
+        <div className="w-full max-w-md">
+          <div className="bg-white rounded-xl shadow-lg p-8">
+            <div className="text-center mb-8">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mt-4"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
+      <LoginPageContent />
+    </Suspense>
+  );
+}
+
+export default LoginPage;

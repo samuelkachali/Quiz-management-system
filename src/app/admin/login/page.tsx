@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function AdminLogin() {
+function AdminLoginContent() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -128,5 +128,22 @@ export default function AdminLogin() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AdminLogin() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-xl shadow-lg">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold text-gray-900">Admin Login</h2>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500 mx-auto mt-4"></div>
+          </div>
+        </div>
+      </div>
+    }>
+      <AdminLoginContent />
+    </Suspense>
   );
 }
