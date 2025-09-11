@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { verifyToken } from '@/backend/utils/auth';
+import { generateGeminiResponse } from '@/lib/gemini';
 
 export async function GET(
   request: NextRequest,
@@ -103,6 +104,20 @@ export async function GET(
       .order('created_at', { ascending: true })
       .limit(50);
 
+    // Process messages to handle bot messages properly
+    const processedMessages = (messages || []).map((message: any) => {
+      if (message.message_type === 'system' && message.user_id === '00000000-0000-0000-0000-000000000001') {
+        return {
+          ...message,
+          user: null,
+          user_name: 'StudyBot',
+          user_email: null,
+          user_role: 'bot'
+        };
+      }
+      return message;
+    });
+
     console.log('Messages query result:', {
       count: messages?.length,
       error: error?.message,
@@ -128,7 +143,7 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      messages: messages || [],
+      messages: processedMessages || [],
       userRole: membership.role
     });
 
@@ -199,9 +214,7 @@ export async function POST(
     const body = await request.json();
     const { content, messageType = 'text', replyToId, fileUrl, fileName, fileSize, fileType } = body;
 
-    console.log('=== CREATING STUDY GROUP MESSAGE ===');
-    console.log('Group ID:', groupId, 'User:', decoded.email);
-    console.log('Message data:', { content, messageType, replyToId, fileUrl, fileName });
+    console.log(`Creating message in group ${groupId} from user ${decoded.email}`);
 
     // Check if user is a member of the study group
     const { data: membership, error: membershipError } = await supabaseAdmin
@@ -254,11 +267,11 @@ export async function POST(
       `)
       .single();
 
-    console.log('Create message result:', {
-      success: !error,
-      messageId: newMessage?.id,
-      error: error?.message
-    });
+    if (error) {
+      console.error('Database insert error:', error.message);
+    } else {
+      console.log(`Message created with ID: ${newMessage?.id}`);
+    }
 
     if (error) {
       console.error('Supabase insert error:', {
@@ -270,10 +283,113 @@ export async function POST(
       throw error;
     }
 
+    // Check if this is a chatbot message (starts with @bot or @chatbot)
+    let botResponse = null;
+    if (messageType === 'text' && content && (content.startsWith('@bot ') || content.startsWith('@chatbot '))) {
+      try {
+        console.log('Detected chatbot message, generating response...');
+
+        // Extract the actual message content (remove @bot/@chatbot prefix)
+        const cleanMessage = content.replace(/^(@bot|@chatbot)\s+/, '');
+
+        // Get recent conversation history for context (last 10 messages from this group)
+        const { data: recentMessages, error: historyError } = await supabaseAdmin
+          .from('study_group_messages')
+          .select('content, message_type, user:user_id(name)')
+          .eq('group_id', groupId)
+          .eq('message_type', 'text')
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        if (historyError) {
+          console.error('Error fetching conversation history:', historyError);
+        }
+
+        // Prepare conversation history for Gemini (reverse to chronological order)
+        const conversationHistory = (recentMessages || [])
+          .reverse()
+          .filter((msg: any) => msg.content && msg.message_type === 'text')
+          .map((msg: any) => ({
+            role: msg.user?.name === 'StudyBot' ? 'assistant' : 'user',
+            content: msg.content
+          }));
+
+        // Generate response using Gemini with retry logic
+        const geminiResult = await generateGeminiResponse(cleanMessage, conversationHistory, {
+          temperature: 0.7,
+          maxTokens: 500,
+          model: 'gemini-1.5-flash',
+          maxRetries: 3
+        });
+
+        if (geminiResult.success) {
+          // Create bot response message using service role
+          // First, ensure the bot user exists in the users table
+          const botUserId = '00000000-0000-0000-0000-000000000001';
+
+          // Try to create or update the bot user with an allowed role
+          const { error: upsertError } = await supabaseAdmin
+            .from('users')
+            .upsert({
+              id: botUserId,
+              name: 'StudyBot',
+              email: 'bot@studyhub.com',
+              role: 'student', // Use 'student' role which should be allowed
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }, {
+              onConflict: 'id'
+            });
+
+          if (upsertError) {
+            console.error('Error creating/updating bot user:', upsertError);
+            // Continue anyway - the user might already exist
+          }
+
+          const { data: botMessage, error: botError } = await supabaseAdmin
+            .from('study_group_messages')
+            .insert({
+              group_id: groupId,
+              user_id: botUserId, // System bot user ID
+              message_type: 'system', // Use 'system' type which is already allowed
+              content: geminiResult.text,
+              parent_message_id: newMessage.id
+            })
+            .select()
+            .single();
+
+          if (botError) {
+            console.error('Error creating bot response:', botError);
+          } else {
+            console.log('Bot response created successfully');
+            botResponse = {
+              ...botMessage,
+              user: null,
+              user_name: 'StudyBot',
+              user_email: null,
+              user_role: 'bot'
+            };
+          }
+        } else {
+          console.error('Gemini API error:', geminiResult.error);
+        }
+      } catch (botError) {
+        console.error('Error generating bot response:', botError);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Message sent successfully',
-      messageData: newMessage
+      messageData: {
+        ...newMessage,
+        // Ensure user info is included
+        user: newMessage.user || null,
+        user_name: newMessage.user?.name || null,
+        user_email: newMessage.user?.email || null,
+        user_role: membership.role || 'member'
+      },
+      botResponse
     });
 
   } catch (error) {

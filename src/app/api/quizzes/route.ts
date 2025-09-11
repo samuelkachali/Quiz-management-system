@@ -125,6 +125,36 @@ export async function POST(request: NextRequest) {
 
     console.log('Quiz created successfully:', newQuiz.id);
 
+    // Automatically create a chat room for the quiz
+    try {
+      console.log('Creating chat room for quiz:', newQuiz.id);
+
+      const { data: chatRoom, error: chatError } = await supabaseAdmin
+        .from('quiz_chat_rooms')
+        .insert({
+          quiz_id: newQuiz.id,
+          room_name: `${title} Discussion`,
+          room_description: `Discussion room for the quiz: ${title}`,
+          room_type: 'quiz_discussion',
+          is_active: true,
+          allow_discussion: true,
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (chatError) {
+        console.error('Error creating chat room:', chatError);
+        // Don't fail the entire request if chat room creation fails
+        // Just log the error and continue
+      } else {
+        console.log('Chat room created successfully:', chatRoom.quiz_id);
+      }
+    } catch (chatRoomError) {
+      console.error('Failed to create chat room:', chatRoomError);
+      // Continue with quiz creation even if chat room fails
+    }
+
     return NextResponse.json({ success: true, quiz: newQuiz });
   } catch (error) {
     return NextResponse.json(

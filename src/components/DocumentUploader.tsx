@@ -264,7 +264,7 @@ export default function DocumentUploader({ initialQuiz, onUploadSuccess }: Docum
           title,
           description,
           questions: questionsToSubmit,
-          passingScore: Number(passingScore)
+          passing_score: Number(passingScore)
         }),
       });
 
