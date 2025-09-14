@@ -48,13 +48,10 @@ export async function GET(request: NextRequest) {
     console.log('=== FETCHING STUDY GROUPS ===');
     console.log('User:', decoded.email, 'Role:', decoded.role);
 
-    // Fetch study groups with member count and creator info
+    // Fetch study groups
     const { data: studyGroups, error } = await supabaseAdmin
       .from('study_groups')
-      .select(`
-        *,
-        creator:created_by(id, name, email)
-      `)
+      .select('*')
       .eq('is_active', true)
       .order('created_at', { ascending: false });
 
@@ -73,19 +70,37 @@ export async function GET(request: NextRequest) {
       throw error;
     }
 
-    // Get member counts for each group
+    // Get member counts and creator info for each group
     const transformedGroups = await Promise.all(
       (studyGroups || []).map(async (group) => {
+        // Get member count
         const { count: memberCount } = await supabaseAdmin
           .from('user_study_groups')
           .select('*', { count: 'exact', head: true })
           .eq('group_id', group.id);
 
+        // Get creator info
+        const { data: creator } = await supabaseAdmin
+          .from('users')
+          .select('id, name, email')
+          .eq('id', group.created_by)
+          .single();
+
+        // Check if current user is a member
+        const { data: membership } = await supabaseAdmin
+          .from('user_study_groups')
+          .select('role')
+          .eq('group_id', group.id)
+          .eq('user_id', decoded.id)
+          .single();
+
         return {
           ...group,
+          creator: creator || null,
           member_count: memberCount || 0,
-          is_member: false, // We'll check this separately if needed
-          is_creator: group.created_by === decoded.id
+          is_member: !!membership,
+          is_creator: group.created_by === decoded.id,
+          user_role: membership?.role || null
         };
       })
     );
@@ -184,10 +199,7 @@ export async function POST(request: NextRequest) {
         max_members: maxMembers || 50,
         is_active: true
       })
-      .select(`
-        *,
-        creator:created_by(id, name, email)
-      `)
+      .select('*')
       .single();
 
     console.log('Create group result:', {
@@ -220,14 +232,23 @@ export async function POST(request: NextRequest) {
       // Don't fail the whole operation, but log the error
     }
 
+    // Get creator info
+    const { data: creator } = await supabaseAdmin
+      .from('users')
+      .select('id, name, email')
+      .eq('id', decoded.id)
+      .single();
+
     return NextResponse.json({
       success: true,
       message: 'Study group created successfully',
       group: {
         ...newGroup,
+        creator: creator || null,
         member_count: 1,
         is_member: true,
-        is_creator: true
+        is_creator: true,
+        user_role: 'admin'
       }
     });
 

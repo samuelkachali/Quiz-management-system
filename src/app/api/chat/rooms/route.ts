@@ -58,11 +58,7 @@ export async function GET(request: NextRequest) {
         room_type,
         is_active,
         allow_discussion,
-        created_at,
-        quizzes (
-          title,
-          description
-        )
+        created_at
       `)
       .eq('is_active', true)
       .order('created_at', { ascending: false });
@@ -82,15 +78,35 @@ export async function GET(request: NextRequest) {
       throw error;
     }
 
-    // Transform the data to match the expected format
-    const transformedRooms = (chatRooms || []).map(room => ({
-      quiz_id: room.quiz_id,
-      room_name: room.room_name,
-      room_description: room.room_description,
-      room_type: room.room_type,
-      quiz_title: (room.quizzes as Array<{ title: string; description: string; }>)?.[0]?.title || 'Unknown Quiz',
-      quiz_description: (room.quizzes as Array<{ title: string; description: string; }>)?.[0]?.description || ''
-    }));
+    // Get quiz information separately for each room
+    const transformedRooms = await Promise.all(
+      (chatRooms || []).map(async (room) => {
+        let quizTitle = 'Unknown Quiz';
+        let quizDescription = '';
+        
+        if (room.quiz_id) {
+          const { data: quiz } = await supabaseAdmin
+            .from('quizzes')
+            .select('title, description')
+            .eq('id', room.quiz_id)
+            .single();
+          
+          if (quiz) {
+            quizTitle = quiz.title || 'Unknown Quiz';
+            quizDescription = quiz.description || '';
+          }
+        }
+        
+        return {
+          quiz_id: room.quiz_id,
+          room_name: room.room_name,
+          room_description: room.room_description,
+          room_type: room.room_type,
+          quiz_title: quizTitle,
+          quiz_description: quizDescription
+        };
+      })
+    );
 
     console.log('Transformed rooms:', transformedRooms.length);
 

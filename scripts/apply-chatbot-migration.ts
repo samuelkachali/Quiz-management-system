@@ -1,7 +1,9 @@
-const { createClient: createSupabaseClient } = require('@supabase/supabase-js');
-const { readFileSync } = require('fs');
-const { join } = require('path');
-require('dotenv').config();
+import { createClient } from '@supabase/supabase-js';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 // Load environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;

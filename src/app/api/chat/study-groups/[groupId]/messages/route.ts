@@ -101,7 +101,7 @@ export async function GET(
         )
       `)
       .eq('group_id', groupId)
-      .order('created_at', { ascending: true })
+      .order('created_at', { ascending: false })
       .limit(50);
 
     // Process messages to handle bot messages properly
@@ -141,9 +141,10 @@ export async function GET(
       throw error;
     }
 
+    // Return latest 50, sorted ascending for UI rendering
     return NextResponse.json({
       success: true,
-      messages: processedMessages || [],
+      messages: (processedMessages || []).sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()),
       userRole: membership.role
     });
 

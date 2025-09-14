@@ -129,85 +129,122 @@ export default function StudyGroupChat({ groupId, studyGroup, currentUser }: Stu
     console.log('Current user:', currentUser);
 
     let channel: any = null;
+    let isSubscribed = false;
 
     const setupSubscription = () => {
-      channel = supabase
-        .channel(`study_group_${groupId}`, {
-          config: {
-            presence: {
-              key: currentUser.id,
-            },
-          },
-        })
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'study_group_messages',
-            filter: `group_id=eq.${groupId}`,
-          },
-          (payload) => {
-            console.log('=== REAL-TIME MESSAGE RECEIVED ===');
-            console.log('Payload:', payload);
-            console.log('New message data:', payload.new);
-            console.log('Message user_id from payload:', payload.new?.user_id);
-            console.log('Current user ID:', currentUser.id);
+      try {
+        // Clean up any existing channel first
+        if (channel) {
+          supabase.removeChannel(channel);
+          channel = null;
+        }
 
-            // Only fetch if the message is not from the current user (to avoid duplication)
-            if (payload.new?.user_id !== currentUser.id) {
-              console.log('Fetching messages after real-time update from other user...');
-              fetchMessages();
-            } else {
-              console.log('Skipping fetch - message is from current user');
+        channel = supabase
+          .channel(`study_group_${groupId}_${Date.now()}`, {
+            config: {
+              presence: {
+                key: currentUser.id,
+              },
+            },
+          })
+          .on(
+            'postgres_changes',
+            {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'study_group_messages',
+              filter: `group_id=eq.${groupId}`,
+            },
+            (payload) => {
+              console.log('=== REAL-TIME MESSAGE RECEIVED ===');
+              console.log('Payload:', payload);
+              console.log('New message data:', payload.new);
+              console.log('Message user_id from payload:', payload.new?.user_id);
+              console.log('Current user ID:', currentUser.id);
+
+              // Fetch messages for all users to ensure real-time updates
+              console.log('🔍 Fetching messages after real-time INSERT event');
+              
+              // Add a small delay to ensure database consistency
+              setTimeout(() => {
+                fetchMessages();
+              }, 100);
             }
+          )
+          .on(
+            'postgres_changes',
+            {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'study_group_messages',
+              filter: `group_id=eq.${groupId}`,
+            },
+            (payload) => {
+              console.log('=== REAL-TIME MESSAGE UPDATED ===');
+              console.log('Updated message:', payload.new);
+              setTimeout(() => {
+                fetchMessages();
+              }, 100);
+            }
+          )
+          .subscribe((status, err) => {
+            console.log('=== SUBSCRIPTION STATUS CHANGE ===');
+            console.log('Subscription status:', status);
+            
+            if (err) {
+              console.error('Subscription error:', err);
+              isSubscribed = false;
+            }
+            
+            if (status === 'SUBSCRIBED') {
+              console.log('✅ Successfully subscribed to real-time updates for group:', groupId);
+              isSubscribed = true;
+            } else if (status === 'CLOSED') {
+              console.log('❌ Subscription closed for group:', groupId);
+              isSubscribed = false;
+            } else if (status === 'CHANNEL_ERROR') {
+              console.error('❌ Channel error for group:', groupId, err);
+              isSubscribed = false;
+              // Attempt to reconnect after a delay
+              setTimeout(() => {
+                if (!isSubscribed) {
+                  console.log('🔄 Attempting to reconnect...');
+                  setupSubscription();
+                }
+              }, 3000);
+            } else if (status === 'TIMED_OUT') {
+              console.log('⏰ Subscription timed out, attempting to reconnect...');
+              isSubscribed = false;
+              setTimeout(() => {
+                if (!isSubscribed) {
+                  setupSubscription();
+                }
+              }, 2000);
+            }
+          });
+      } catch (error) {
+        console.error('Error setting up subscription:', error);
+        // Retry after a delay
+        setTimeout(() => {
+          if (!isSubscribed) {
+            setupSubscription();
           }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'study_group_messages',
-            filter: `group_id=eq.${groupId}`,
-          },
-          (payload) => {
-            console.log('=== REAL-TIME MESSAGE UPDATED ===');
-            console.log('Updated message:', payload.new);
-            fetchMessages();
-          }
-        )
-        .subscribe((status, err) => {
-          console.log('=== SUBSCRIPTION STATUS CHANGE ===');
-          console.log('Subscription status:', status);
-          if (err) {
-            console.error('Subscription error:', err);
-          }
-          if (status === 'SUBSCRIBED') {
-            console.log('Successfully subscribed to real-time updates for group:', groupId);
-          } else if (status === 'CLOSED') {
-            console.log('Subscription closed for group:', groupId);
-          } else if (status === 'CHANNEL_ERROR') {
-            console.error('Channel error for group:', groupId, err);
-          } else if (status === 'TIMED_OUT') {
-            console.log('Subscription timed out, attempting to reconnect...');
-            // Attempt to reconnect after a delay
-            setTimeout(() => {
-              if (channel) {
-                supabase.removeChannel(channel);
-                setupSubscription();
-              }
-            }, 5000);
-          }
-        });
+        }, 5000);
+      }
     };
 
     setupSubscription();
 
     return () => {
       console.log('=== CLEANING UP SUBSCRIPTION ===');
+      isSubscribed = false;
       if (channel) {
-        supabase.removeChannel(channel);
+        try {
+          supabase.removeChannel(channel);
+        } catch (error) {
+          console.error('Error removing channel:', error);
+        }
+        channel = null;
       }
     };
   }, [groupId, currentUser.id]);
