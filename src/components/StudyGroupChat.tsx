@@ -140,7 +140,7 @@ export default function StudyGroupChat({ groupId, studyGroup, currentUser }: Stu
         }
 
         channel = supabase
-          .channel(`study_group_${groupId}_${Date.now()}`, {
+          .channel(`study_group_${groupId}`, {
             config: {
               presence: {
                 key: currentUser.id,
@@ -187,6 +187,20 @@ export default function StudyGroupChat({ groupId, studyGroup, currentUser }: Stu
               }, 100);
             }
           )
+          // Also listen for broadcast events so all clients get instant updates
+          .on('broadcast', { event: 'new_message' }, (payload: any) => {
+            try {
+              const msg = payload?.payload;
+              if (!msg) return;
+              console.log('📡 Broadcast new_message received:', msg.id);
+              setMessages(prev => {
+                if (prev.some(m => m.id === msg.id)) return prev;
+                return [...prev, msg];
+              });
+            } catch (e) {
+              console.error('Error handling broadcast payload:', e);
+            }
+          })
           .subscribe((status, err) => {
             console.log('=== SUBSCRIPTION STATUS CHANGE ===');
             console.log('Subscription status:', status);

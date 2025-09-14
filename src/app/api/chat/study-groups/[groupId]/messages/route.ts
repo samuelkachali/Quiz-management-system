@@ -379,6 +379,26 @@ export async function POST(
       }
     }
 
+    // Broadcast to Realtime so all clients in the group get instant updates (doesn't rely on DB replication)
+    try {
+      const channelName = `study_group_${groupId}`;
+      // Fire-and-forget broadcast; ignore any errors for API response flow
+      // @ts-ignore - broadcast type available at runtime
+      supabaseAdmin.channel(channelName).send({
+        type: 'broadcast',
+        event: 'new_message',
+        payload: {
+          ...newMessage,
+          user: newMessage.user || null,
+          user_name: newMessage.user?.name || null,
+          user_email: newMessage.user?.email || null,
+          user_role: membership.role || 'member'
+        }
+      });
+    } catch (broadcastError) {
+      console.warn('Broadcast failed (non-fatal):', broadcastError);
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Message sent successfully',
