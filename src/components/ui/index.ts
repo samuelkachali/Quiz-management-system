@@ -10,6 +10,8 @@ export * from './scroll-area';
 export * from './badge';
 export * from './skeleton';
 export * from './card';
+export * from './select';
+export * from './radio-group';
 
 // Hooks
 export * from './use-toast';

@@ -165,23 +165,23 @@ export default function StudentDashboard() {
           <div className="absolute bottom-24 left-24 w-4 h-4 bg-red-500 rounded-full"></div>
         </div>
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
+          <div className="grid gap-8 lg:grid-cols-2 lg:gap-12 items-center">
             {/* Left Content */}
             <div className="space-y-8">
               <div className="space-y-4">
-                <div className="inline-flex items-center space-x-2 bg-blue-100 text-blue-800 px-4 py-2 rounded-full text-sm font-medium">
+                <div className="inline-flex items-center space-x-2 bg-blue-100 text-blue-800 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium">
                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                   <span>Welcome Back</span>
                 </div>
                 
-                <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 leading-tight">
+                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-bold text-gray-900 leading-tight">
                   ARE YOU READY?
                   <br />
                   <span className="text-blue-600">BACK TO SCHOOL</span>
                 </h1>
                 
-                <p className="text-lg text-gray-600 leading-relaxed max-w-lg">
+                <p className="text-sm sm:text-base text-gray-600 leading-relaxed max-w-lg">
                   Welcome back, <span className="font-semibold text-gray-900">{user?.name}</span>! 
                   Ready to test your knowledge and continue your learning journey? 
                   Explore quizzes, track your progress, and achieve your goals.
@@ -190,7 +190,7 @@ export default function StudentDashboard() {
 
               <button
                 onClick={() => setActiveView('available')}
-                className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-full text-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 sm:px-8 sm:py-4 rounded-full text-base sm:text-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
               >
                 START LEARNING
                 <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -255,7 +255,7 @@ export default function StudentDashboard() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </div>
-              <div className="text-3xl font-bold text-gray-900 mb-2">{quizzes.length}</div>
+              <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{quizzes.length}</div>
               <div className="text-gray-600 font-medium">Total Quizzes</div>
             </div>
 
@@ -265,7 +265,7 @@ export default function StudentDashboard() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                 </svg>
               </div>
-              <div className="text-3xl font-bold text-gray-900 mb-2">{attempts.length}</div>
+              <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{attempts.length}</div>
               <div className="text-gray-600 font-medium">Completed</div>
             </div>
 
@@ -275,7 +275,7 @@ export default function StudentDashboard() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2-2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
               </div>
-              <div className="text-3xl font-bold text-gray-900 mb-2">
+              <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
                 {attempts.length > 0 ? Math.round(attempts.reduce((acc, att) => acc + att.score, 0) / attempts.length) : 0}%
               </div>
               <div className="text-gray-600 font-medium">Average Score</div>
@@ -287,9 +287,9 @@ export default function StudentDashboard() {
       {/* Quick Actions */}
       <div className="bg-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Quick Actions</h2>
-            <p className="text-lg text-gray-600">Choose what you'd like to do next</p>
+          <div className="text-center mb-8 sm:mb-12">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-4">Quick Actions</h2>
+            <p className="text-base sm:text-lg text-gray-600">Choose what you'd like to do next</p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
@@ -303,7 +303,7 @@ export default function StudentDashboard() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-3">Take a Quiz</h3>
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">Take a Quiz</h3>
                 <p className="text-gray-600 mb-6">Start learning with available quizzes</p>
                 <div className="text-sm text-blue-600 font-medium">
                   {getAvailableQuizzes().length} Available →
@@ -321,7 +321,7 @@ export default function StudentDashboard() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2-2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-3">View Progress</h3>
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">View Progress</h3>
                 <p className="text-gray-600 mb-6">Review your quiz history and results</p>
                 <div className="text-sm text-green-600 font-medium">
                   {attempts.length} Attempts →
@@ -342,7 +342,7 @@ export default function StudentDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">Available Quizzes</h2>
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Available Quizzes</h2>
               <p className="text-gray-600">Ready to challenge yourself? Start a new quiz!</p>
             </div>
             <button
@@ -536,7 +536,7 @@ export default function StudentDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">Quiz History</h2>
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Quiz History</h2>
               <p className="text-gray-600">Track your progress and review past attempts</p>
             </div>
             <button
@@ -670,11 +670,11 @@ export default function StudentDashboard() {
           <div className="flex justify-between h-16">
             <div className="flex items-center">
               <div className="flex items-center space-x-3">
-                <div className="hidden sm:block">
-                  <nav className="flex space-x-8">
+                <div className="block">
+                  <nav className="flex space-x-4 overflow-x-auto sm:space-x-8">
                     <button
                       onClick={() => setActiveView('home')}
-                      className={`px-3 py-2 text-sm font-medium transition-colors ${
+                      className={`px-3 py-2 text-xs sm:text-sm whitespace-nowrap font-medium transition-colors ${
                         activeView === 'home'
                           ? 'text-gray-900 border-b-2 border-blue-500'
                           : 'text-gray-600 hover:text-gray-900'
@@ -684,7 +684,7 @@ export default function StudentDashboard() {
                     </button>
                     <button
                       onClick={() => setActiveView('available')}
-                      className={`px-3 py-2 text-sm font-medium transition-colors ${
+                      className={`px-3 py-2 text-xs sm:text-sm whitespace-nowrap font-medium transition-colors ${
                         activeView === 'available'
                           ? 'text-gray-900 border-b-2 border-blue-500'
                           : 'text-gray-600 hover:text-gray-900'
@@ -694,7 +694,7 @@ export default function StudentDashboard() {
                     </button>
                     <button
                       onClick={() => setActiveView('history')}
-                      className={`px-3 py-2 text-sm font-medium transition-colors ${
+                      className={`px-3 py-2 text-xs sm:text-sm whitespace-nowrap font-medium transition-colors ${
                         activeView === 'history'
                           ? 'text-gray-900 border-b-2 border-blue-500'
                           : 'text-gray-600 hover:text-gray-900'
@@ -704,7 +704,7 @@ export default function StudentDashboard() {
                     </button>
                     <button
                       onClick={() => setActiveView('chat')}
-                      className={`px-3 py-2 text-sm font-medium transition-colors ${
+                      className={`px-3 py-2 text-xs sm:text-sm whitespace-nowrap font-medium transition-colors ${
                         activeView === 'chat'
                           ? 'text-gray-900 border-b-2 border-blue-500'
                           : 'text-gray-600 hover:text-gray-900'

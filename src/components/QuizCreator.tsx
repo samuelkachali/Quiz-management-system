@@ -2,6 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui';
+
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 type Question = {
   id: string;
@@ -214,39 +221,37 @@ export default function QuizCreator({ initialQuiz, isEditing = false }: QuizCrea
             
             <div className="grid grid-cols-1 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Title</label>
-                <input
+                <Label>Title</Label>
+                <Input
                   type="text"
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                   placeholder="Enter quiz title"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700">Description</label>
-                <textarea
+                <Label>Description</Label>
+                <Textarea
                   required
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={3}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                   placeholder="Enter quiz description"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700">Passing Score (%)</label>
-                <input
+                <Label>Passing Score (%)</Label>
+                <Input
                   type="number"
-                  min="1"
-                  max="100"
+                  min={1}
+                  max={100}
                   required
                   value={passingScore}
                   onChange={(e) => setPassingScore(Number(e.target.value))}
-                  className="mt-1 block w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-32"
                 />
               </div>
             </div>
@@ -255,86 +260,91 @@ export default function QuizCreator({ initialQuiz, isEditing = false }: QuizCrea
           <div className="bg-white shadow rounded-lg p-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-medium text-gray-900">Questions</h2>
-              <button
+              <Button
                 type="button"
                 onClick={addQuestion}
                 disabled={loading}
-                className="inline-flex items-center bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="inline-flex items-center"
               >
                 <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
                 Add Question
-              </button>
+              </Button>
             </div>
 
             {questions.map((question, questionIndex) => (
               <div key={question.id} data-question={questionIndex} className="border border-gray-200 rounded-lg p-4 mb-4 transition-all duration-200 hover:shadow-md">
                 <div className="flex justify-between items-start mb-4">
                   <h3 className="text-md font-medium text-gray-900">Question {questionIndex + 1}</h3>
-                  <button
+                  <Button
                     type="button"
                     onClick={() => removeQuestion(questionIndex)}
                     disabled={loading}
-                    className="inline-flex items-center text-red-600 hover:text-red-800 text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    variant="destructive"
+                    size="sm"
+                    className="inline-flex items-center"
                   >
                     <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                     Remove
-                  </button>
+                  </Button>
                 </div>
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Question Text</label>
-                    <input
+                    <Label>Question Text</Label>
+                    <Input
                       type="text"
                       required
                       value={question.question}
                       onChange={(e) => updateQuestion(questionIndex, 'question', e.target.value)}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                       placeholder="Enter your question"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Question Type</label>
-                    <select
+                    <Label>Question Type</Label>
+                    <Select
                       value={question.type}
-                      onChange={(e) => {
-                        const newType = e.target.value as 'multiple-choice' | 'true-false';
-                        updateQuestion(questionIndex, 'type', newType);
-                      }}
-                      className="mt-1 block w-48 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                      onValueChange={(val: string) => updateQuestion(questionIndex, 'type', val as 'multiple-choice' | 'true-false')}
                     >
-                      <option value="multiple-choice">Multiple Choice</option>
-                      <option value="true-false">True/False</option>
-                    </select>
+                      <SelectTrigger className="w-48">
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="multiple-choice">Multiple Choice</SelectItem>
+                        <SelectItem value="true-false">True/False</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   {question.type === 'multiple-choice' && question.options && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Options</label>
-                      {question.options.map((option, optionIndex) => (
-                        <div key={optionIndex} className="flex items-center space-x-2 mb-2">
-                          <input
-                            type="radio"
-                            name={`correct-${questionIndex}`}
-                            checked={question.correctAnswer === optionIndex}
-                            onChange={() => updateQuestion(questionIndex, 'correctAnswer', optionIndex)}
-                            className="text-indigo-600"
-                          />
-                          <input
-                            type="text"
-                            required
-                            value={option}
-                            onChange={(e) => updateOption(questionIndex, optionIndex, e.target.value)}
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                            placeholder={`Option ${optionIndex + 1}`}
-                          />
-                        </div>
-                      ))}
+                      <Label className="mb-2 block">Options</Label>
+                      <RadioGroup
+                        value={String(question.correctAnswer)}
+                        onValueChange={(val: string) => updateQuestion(questionIndex, 'correctAnswer', Number(val))}
+                        className="space-y-2"
+                      >
+                        {question.options.map((option, optionIndex) => (
+                          <div key={optionIndex} className="flex items-center space-x-2">
+                            <RadioGroupItem id={`q${questionIndex}-opt${optionIndex}`} value={String(optionIndex)} />
+                            <Label htmlFor={`q${questionIndex}-opt${optionIndex}`} className="sr-only">
+                              Option {optionIndex + 1}
+                            </Label>
+                            <Input
+                              type="text"
+                              required
+                              value={option}
+                              onChange={(e) => updateOption(questionIndex, optionIndex, e.target.value)}
+                              className="flex-1"
+                              placeholder={`Option ${optionIndex + 1}`}
+                            />
+                          </div>
+                        ))}
+                      </RadioGroup>
                     </div>
                   )}
 
@@ -368,22 +378,18 @@ export default function QuizCreator({ initialQuiz, isEditing = false }: QuizCrea
           </div>
 
           <div className="flex justify-end space-x-4">
-            <button
+            <Button
               type="button"
               onClick={() => router.push('/admin/dashboard')}
               disabled={loading}
-              className="inline-flex items-center px-6 py-3 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              variant="outline"
             >
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="inline-flex items-center px-6 py-3 border border-transparent rounded-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-75 disabled:cursor-not-allowed transition-colors"
-            >
+            </Button>
+            <Button type="submit" disabled={loading}>
               {loading ? (
                 <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
@@ -397,7 +403,7 @@ export default function QuizCreator({ initialQuiz, isEditing = false }: QuizCrea
                   {isEditing ? 'Update Quiz' : 'Create Quiz'}
                 </>
               )}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

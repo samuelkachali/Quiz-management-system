@@ -170,13 +170,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     }
   }, [user?.id]);
   
-  // Handle real-time notifications
+  // Handle real-time notifications + chat broadcasts
   useEffect(() => {
     if (!user?.id) return;
     
     const supabaseClient = createClientComponentClient<Database>();
     
-    // Subscribe to new notifications
+    // Subscribe to DB-backed notifications
     const channel = supabaseClient
       .channel('notifications')
       .on(
@@ -199,41 +199,50 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             userId: payload.new.user_id as string
           };
           
-          // Update the notifications list
           setNotifications(prev => [newNotification, ...prev]);
-          
-          // Show toast notification
           showNotificationToast(newNotification);
         }
       )
       .subscribe();
-    
-    // Also handle updates to existing notifications (e.g., when marked as read)
-    const updateChannel = supabaseClient
-      .channel('notification_updates')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`
-        },
-        (payload) => {
-          setNotifications(prev => 
-            prev.map(notif => 
-              notif.id === payload.old.id 
-                ? { ...notif, ...payload.new, read: payload.new.read as boolean }
-                : notif
-            )
-          );
+
+    // Subscribe to chat broadcast events for new messages across groups the user is in
+    const groupChannel = supabaseClient
+      .channel(`user_chat_notifications_${user.id}`)
+      .on('broadcast', { event: 'new_message' }, (payload: any) => {
+        try {
+          const msg = payload?.payload;
+          if (!msg) return;
+
+          // Skip if message author is current user (avoid self-notify) 
+          if (msg.user_id === user.id) return;
+
+          const roomId = msg.group_id;
+          const senderName = msg.sender_name || 'Someone';
+          const roomName = msg.group_name || 'chat';
+          const text = msg.preview || msg.content || '[message]';
+
+          const notification: Notification = {
+            id: `chat_${msg.id}`,
+            type: 'new_message',
+            title: `New message in ${roomName}`,
+            message: `${senderName}: ${text}`,
+            timestamp: new Date(),
+            read: false,
+            metadata: { roomId, roomName, senderName, messageId: msg.id },
+            userId: user.id,
+          };
+
+          setNotifications(prev => [notification, ...prev]);
+          showNotificationToast(notification);
+        } catch (e) {
+          console.error('Error handling chat broadcast for notifications:', e);
         }
-      )
+      })
       .subscribe();
     
     return () => {
       channel.unsubscribe();
-      updateChannel.unsubscribe();
+      groupChannel.unsubscribe();
     };
   }, [user?.id]);
   

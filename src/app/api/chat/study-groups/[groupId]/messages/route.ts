@@ -382,19 +382,60 @@ export async function POST(
     // Broadcast to Realtime so all clients in the group get instant updates (doesn't rely on DB replication)
     try {
       const channelName = `study_group_${groupId}`;
+
+      // Fetch group name for nicer notifications
+      const { data: groupData } = await supabaseAdmin
+        .from('study_groups')
+        .select('name')
+        .eq('id', groupId)
+        .single();
+
+      const groupName = groupData?.name || 'Study Group';
+      const senderName = newMessage.user?.name || 'Someone';
+      const preview =
+        (newMessage.content && newMessage.content.slice(0, 120)) ||
+        (newMessage.file_name ? `[file] ${newMessage.file_name}` : '[message]');
+
       // Fire-and-forget broadcast; ignore any errors for API response flow
       // @ts-ignore - broadcast type available at runtime
+      const broadcastPayload = {
+        ...newMessage,
+        user: newMessage.user || null,
+        user_name: newMessage.user?.name || null,
+        user_email: newMessage.user?.email || null,
+        user_role: membership.role || 'member',
+        group_name: groupName,
+        sender_name: senderName,
+        preview,
+      };
+
       supabaseAdmin.channel(channelName).send({
         type: 'broadcast',
         event: 'new_message',
-        payload: {
-          ...newMessage,
-          user: newMessage.user || null,
-          user_name: newMessage.user?.name || null,
-          user_email: newMessage.user?.email || null,
-          user_role: membership.role || 'member'
-        }
+        payload: broadcastPayload
       });
+
+      // Additionally notify each group member via their user-specific channel so dashboards receive it
+      const { data: members } = await supabaseAdmin
+        .from('user_study_groups')
+        .select('user_id')
+        .eq('group_id', groupId);
+
+      if (members && members.length > 0) {
+        for (const m of members) {
+          try {
+            const userChannel = `user_chat_notifications_${m.user_id}`;
+            // @ts-ignore - broadcast type available at runtime
+            supabaseAdmin.channel(userChannel).send({
+              type: 'broadcast',
+              event: 'new_message',
+              payload: broadcastPayload
+            });
+          } catch (e) {
+            console.warn('User notification broadcast failed (non-fatal):', e);
+          }
+        }
+      }
     } catch (broadcastError) {
       console.warn('Broadcast failed (non-fatal):', broadcastError);
     }

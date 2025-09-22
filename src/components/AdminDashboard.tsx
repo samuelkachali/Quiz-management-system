@@ -8,6 +8,21 @@ import IntegrityDashboard from './IntegrityDashboard';
 import SmartNotifications from './SmartNotifications';
 import AdvancedAnalytics from './AdvancedAnalytics';
 import StudyGroupManager from './StudyGroupManager';
+import { toast } from "sonner";
+import {
+  LayoutDashboard,
+  FileText,
+  MessageSquare,
+  Users as UsersIcon,
+  Shield,
+  Bell,
+  BarChart2,
+  CheckCircle2,
+  FileBarChart,
+  LogOut,
+  SidebarOpen,
+  SidebarClose
+} from 'lucide-react';
 
 export default function AdminDashboard() {
   console.log('🔥 AdminDashboard component rendered!');
@@ -17,10 +32,12 @@ export default function AdminDashboard() {
   const [attempts, setAttempts] = useState<QuizAttempt[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [activeSection, setActiveSection] = useState('dashboard');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [deletingQuizId, setDeletingQuizId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [importedQuiz, setImportedQuiz] = useState<{ id: string; title?: string; description?: string; questions: any[] } | null>(null);
   const [activeTab, setActiveTab] = useState('quizzes'); // 'quizzes' or 'create'
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -176,6 +193,7 @@ export default function AdminDashboard() {
           router.push('/admin/login');
         }, 2000);
       } else {
+        toast.error(`Error loading dashboard: ${errorMessage}`); 
         setError(`Error loading dashboard: ${errorMessage}`);
       }
       setLoading(false);
@@ -198,49 +216,53 @@ export default function AdminDashboard() {
   }
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    router.push('/');
-  };
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  toast.success("Logged out successfully 👋");
+  router.push('/');
+};
+
 
   const deleteQuiz = async (quizId: string) => {
-    if (!confirm('Are you sure you want to delete this quiz? This action cannot be undone.')) return;
+  if (!confirm('Are you sure you want to delete this quiz? This action cannot be undone.')) return;
 
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        alert('Authentication required. Please log in again.');
-        router.push('/admin/login');
-        return;
-      }
-
-      const response = await fetch(`/api/quizzes/${quizId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to delete quiz');
-      }
-
-      if (data.success) {
-        // Update the UI by removing the deleted quiz
-        setQuizzes(prevQuizzes => prevQuizzes.filter(quiz => quiz.id !== quizId));
-        // Show a success message
-        alert('Quiz deleted successfully');
-      } else {
-        throw new Error(data.message || 'Failed to delete quiz');
-      }
-    } catch (error) {
-      console.error('Error deleting quiz:', error);
-      alert(`Error: ${error instanceof Error ? error.message : 'Failed to delete quiz'}`);
+  try {
+    setDeletingQuizId(quizId); // 👈 only this quiz is "loading"
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.error('Authentication required. Please log in again.');
+      router.push('/admin/login');
+      return;
     }
-  };
+
+    const response = await fetch(`/api/quizzes/${quizId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      toast.error(data.message || "Failed to delete quiz");
+      return;
+    }
+
+    // ✅ Update UI instantly
+    setQuizzes((prev) => prev.filter((quiz) => quiz.id !== quizId));
+
+    toast.success("Quiz deleted successfully ✅");
+  } catch (err) {
+    toast.error("Unexpected error occurred");
+    console.error(err);
+  } finally {
+    setDeletingQuizId(null); // reset loading state
+  }
+};
+
+
 
   const getQuizStats = (quizId: string) => {
     const quizAttempts = attempts.filter(attempt => {
@@ -257,30 +279,30 @@ export default function AdminDashboard() {
   };
 
   const handleUserApproval = async (userId: string, status: 'active' | 'rejected') => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/admin/users', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ userId, status }),
-      });
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch('/api/admin/users', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ userId, status }),
+    });
 
-      const data = await response.json();
-      if (data.success) {
-        // Refresh the users list
-        fetchData(token!);
-        alert(`User ${status === 'active' ? 'approved' : 'rejected'} successfully`);
-      } else {
-        alert('Error updating user status');
-      }
-    } catch (error) {
-      console.error('Error updating user:', error);
-      alert('Error updating user status');
+    const data = await response.json();
+    if (data.success) {
+      fetchData(token!);
+      toast.success(`User ${status === 'active' ? 'approved' : 'rejected'} successfully ✅`);
+    } else {
+      toast.error(data.message || 'Error updating user status');
     }
-  };
+  } catch (error) {
+    console.error('Error updating user:', error);
+    toast.error('Unexpected error updating user status');
+  }
+};
+
 
   const handlePasswordReset = async (userId: string, userEmail: string) => {
     const newPassword = prompt(`Enter new password for ${userEmail}:`);
@@ -304,11 +326,11 @@ export default function AdminDashboard() {
       if (data.success) {
         alert(`Password reset successfully for ${userEmail}. New password: ${newPassword}`);
       } else {
-        alert('Error resetting password: ' + data.message);
+        toast.error('Error resetting password: ' + data.message);
       }
     } catch (error) {
       console.error('Error resetting password:', error);
-      alert('Error resetting password');
+      toast.error('Error resetting password');
     }
   };
 
@@ -383,46 +405,54 @@ export default function AdminDashboard() {
   }
 
   const renderSidebar = () => (
-    <div className="w-72 bg-white border-r border-gray-200 shadow-sm h-full flex flex-col">
+    <div className={`${isSidebarCollapsed ? 'w-16' : 'w-72'} bg-white border-r border-gray-200 shadow-sm h-screen fixed top-0 left-0 flex flex-col overflow-hidden`}
+      style={{ WebkitOverflowScrolling: 'touch' }}
+    >
       {/* Header */}
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-sm">
-            <span className="text-white font-bold text-lg">Q</span>
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-gray-800">Quiz Admin</h2>
-            <p className="text-gray-500 text-sm">Management Panel</p>
+      <div className="p-4 border-b border-gray-200">
+        <div className="flex items-center">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-sm">
+              <span className="text-white font-bold text-lg">Q</span>
+            </div>
+          {!isSidebarCollapsed && (
+            <div>
+              <h2 className="text-lg font-bold text-gray-800">Quiz Admin</h2>
+              <p className="text-gray-500 text-sm">Management Panel</p>
+            </div>
+          )}
           </div>
         </div>
       </div>
 
       {/* User info */}
-      <div className="px-6 py-4 border-b border-gray-200">
-        <div className="flex items-center space-x-3">
+      <div className="px-4 py-3 border-b border-gray-200">
+        <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'space-x-3'}`}>
           <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
             <span className="text-white font-semibold text-sm">{user?.name?.charAt(0) || 'A'}</span>
           </div>
-          <div>
-            <p className="text-gray-800 font-medium text-sm">{user?.name}</p>
-            <p className="text-gray-500 text-xs capitalize">{user?.role?.replace('_', ' ')}</p>
-          </div>
+          {!isSidebarCollapsed && (
+            <div>
+              <p className="text-gray-800 font-medium text-sm">{user?.name}</p>
+              <p className="text-gray-500 text-xs capitalize">{user?.role?.replace('_', ' ')}</p>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="mt-6 px-3 flex-1">
+      <nav className="mt-4 px-2 flex-1 overflow-y-auto">
         <div className="space-y-1">
           {[
-            { id: 'dashboard', label: 'Dashboard', icon: '📊', desc: 'Overview & Stats' },
-            { id: 'quizzes', label: 'Quiz Management', icon: '📝', desc: 'Create & Edit Quizzes' },
-            { id: 'chat', label: 'Study Chat', icon: '💬', desc: 'Monitor Discussions' },
-            { id: 'students', label: 'Students', icon: '👥', desc: 'Student Management' },
-            { id: 'integrity', label: 'Integrity Monitor', icon: '🛡️', desc: 'Academic Integrity' },
-            { id: 'notifications', label: 'Notifications', icon: '🔔', desc: 'Smart Notifications' },
-            { id: 'advanced-analytics', label: 'Advanced Analytics', icon: '📊', desc: 'AI Learning Insights' },
-            ...(user?.role === 'super_admin' ? [{ id: 'approvals', label: 'Approvals', icon: '✅', desc: 'Admin Requests' }] : []),
-            { id: 'reports', label: 'Reports', icon: '📋', desc: 'System Reports' }
+            { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" />, desc: 'Overview & Stats' },
+            { id: 'quizzes', label: 'Quiz Management', icon: <FileText className="w-5 h-5" />, desc: 'Create & Edit Quizzes' },
+            { id: 'chat', label: 'Study Chat', icon: <MessageSquare className="w-5 h-5" />, desc: 'Monitor Discussions' },
+            { id: 'students', label: 'Students', icon: <UsersIcon className="w-5 h-5" />, desc: 'Student Management' },
+            { id: 'integrity', label: 'Integrity Monitor', icon: <Shield className="w-5 h-5" />, desc: 'Academic Integrity' },
+            { id: 'notifications', label: 'Notifications', icon: <Bell className="w-5 h-5" />, desc: 'Smart Notifications' },
+            { id: 'advanced-analytics', label: 'Advanced Analytics', icon: <BarChart2 className="w-5 h-5" />, desc: 'AI Learning Insights' },
+            ...(user?.role === 'super_admin' ? [{ id: 'approvals', label: 'Approvals', icon: <CheckCircle2 className="w-5 h-5" />, desc: 'Admin Requests' }] : []),
+            { id: 'reports', label: 'Reports', icon: <FileBarChart className="w-5 h-5" />, desc: 'System Reports' }
           ].map((item) => (
             <button
               key={item.id}
@@ -433,52 +463,35 @@ export default function AdminDashboard() {
                   : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 border border-transparent'
               }`}
             >
-              <div className="flex items-center space-x-3">
+              <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'space-x-3'}`}>
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 ${
                   activeSection === item.id
                     ? 'bg-blue-100 text-blue-700'
                     : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'
                 }`}>
-                  <span className="text-lg">{item.icon}</span>
+                  {item.icon}
                 </div>
-                <div className="flex-1">
-                  <p className={`font-medium transition-colors duration-200 ${
-                    activeSection === item.id ? 'text-blue-700' : 'text-gray-800 group-hover:text-gray-900'
-                  }`}>
-                    {item.label}
-                  </p>
-                  <p className={`text-xs transition-colors duration-200 ${
-                    activeSection === item.id ? 'text-blue-600' : 'text-gray-500 group-hover:text-gray-600'
-                  }`}>
-                    {item.desc}
-                  </p>
-                </div>
+                {!isSidebarCollapsed && (
+                  <div className="flex-1">
+                    <p className={`font-medium transition-colors duration-200 ${
+                      activeSection === item.id ? 'text-blue-700' : 'text-gray-800 group-hover:text-gray-900'
+                    }`}>
+                      {item.label}
+                    </p>
+                    <p className={`text-xs transition-colors duration-200 ${
+                      activeSection === item.id ? 'text-blue-600' : 'text-gray-500 group-hover:text-gray-600'
+                    }`}>
+                      {item.desc}
+                    </p>
+                  </div>
+                )}
               </div>
             </button>
           ))}
         </div>
       </nav>
 
-      {/* Quick stats */}
-      <div className="mx-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
-        <h3 className="text-gray-700 font-medium text-sm mb-3">Quick Stats</h3>
-        <div className="space-y-2">
-          <div className="flex justify-between items-center">
-            <span className="text-gray-600 text-xs">Total Quizzes</span>
-            <span className="text-blue-600 font-semibold text-sm">{quizzes.length}</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-gray-600 text-xs">Total Attempts</span>
-            <span className="text-green-600 font-semibold text-sm">{attempts.length}</span>
-          </div>
-          {user?.role === 'super_admin' && (
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600 text-xs">Pending Approvals</span>
-              <span className="text-amber-600 font-semibold text-sm">{pendingAdmins.length}</span>
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Quick stats removed as requested */}
 
       {/* Logout button */}
       <div className="p-4 border-t border-gray-200">
@@ -486,18 +499,29 @@ export default function AdminDashboard() {
           onClick={handleLogout}
           className="w-full bg-gray-50 hover:bg-gray-100 text-gray-700 hover:text-gray-900 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 border border-gray-200 flex items-center justify-center space-x-2"
         >
-          <span>🚪</span>
-          <span>Logout</span>
+          <LogOut className="w-4 h-4" />
+          {!isSidebarCollapsed && <span>Logout</span>}
         </button>
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className={`min-h-screen bg-gray-50 ${isSidebarCollapsed ? 'pl-16' : 'pl-72'}`}>
       {renderSidebar()}
 
-      <div className="flex-1 flex flex-col">
+      {/* Global Sidebar Toggle - always visible */
+      }
+      <button
+        onClick={() => setIsSidebarCollapsed(v => !v)}
+        className="fixed top-20 z-50 -translate-x-1/2 p-2 rounded-full bg-white border border-gray-200 shadow-lg ring-1 ring-black/5 hover:bg-gray-50 text-gray-700"
+        aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        style={{ left: isSidebarCollapsed ? '4.5rem' : '18.5rem', zIndex: 9999 }}
+      >
+        {isSidebarCollapsed ? <SidebarOpen className="w-5 h-5" /> : <SidebarClose className="w-5 h-5" />}
+      </button>
+
+      <div className="flex flex-col min-h-screen">
         <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
           <div className="px-6">
             <div className="flex justify-between h-16">
@@ -701,10 +725,16 @@ export default function AdminDashboard() {
                                 </button>
                                 <button
                                   onClick={() => deleteQuiz(quiz.id)}
-                                  className="flex-1 bg-red-50 hover:bg-red-100 text-red-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 border border-red-200"
+                                  disabled={deletingQuizId === quiz.id}
+                                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 border ${
+                                    deletingQuizId === quiz.id
+                                      ? "bg-red-100 text-red-400 border-red-200 cursor-not-allowed"
+                                      : "bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
+                                  }`}
                                 >
-                                  Delete
+                                  {deletingQuizId === quiz.id ? "Deleting..." : "Delete"}
                                 </button>
+
                               </div>
                             </div>
                           </div>
